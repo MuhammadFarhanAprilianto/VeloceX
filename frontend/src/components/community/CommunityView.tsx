@@ -693,7 +693,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-[1600px] mx-auto w-full font-sans animate-fade-in text-slate-100">
+    <div className="flex flex-col gap-6 p-3 sm:p-5 md:p-6 pb-24 md:pb-6 max-w-[1600px] mx-auto w-full font-sans animate-fade-in text-slate-100">
       {/* TOAST POPUP */}
       {toastMessage && (
         <div className="fixed top-6 right-6 z-[99999] flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#1F1E25] border border-[#00E163]/40 text-white shadow-2xl backdrop-blur-xl animate-bounce-short">

@@ -12,7 +12,7 @@ interface AnalyticsViewProps {
 
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onOrderSuccess }) => {
   return (
-    <div className="flex flex-col w-full gap-5 p-5 md:p-6 bg-[#131118]">
+    <div className="flex flex-col w-full gap-5 p-3 sm:p-5 md:p-6 pb-24 md:pb-6 bg-[#131118]">
       {/* 1. Top Ticker Market Stats Header */}
       <AnalyticsTickerHeader />
 

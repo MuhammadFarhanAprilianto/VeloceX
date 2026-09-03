@@ -245,13 +245,13 @@ export const TradeflareHeader: React.FC<TradeflareHeaderProps> = ({ onOpenAuthMo
   };
 
   return (
-    <header className="relative flex items-center justify-between w-full h-16 px-6 bg-[#131118] border-b border-white/5 select-none z-40">
+    <header className="relative flex items-center justify-between w-full h-16 px-3 sm:px-6 bg-[#131118] border-b border-white/5 select-none z-40">
       {/* Left: Brand Logo & Functional Search */}
-      <div className="flex items-center gap-7">
+      <div className="flex items-center gap-3 sm:gap-6">
         {/* Logo */}
         <div
           onClick={() => setSelectedSymbol('BTCUSDT')}
-          className="flex items-center gap-3 cursor-pointer group"
+          className="flex items-center gap-2.5 cursor-pointer group"
           title="Back to Bitcoin"
         >
           <div className="flex items-center justify-center w-8 h-8 aspect-square shrink-0">
@@ -261,7 +261,7 @@ export const TradeflareHeader: React.FC<TradeflareHeaderProps> = ({ onOpenAuthMo
               className="w-8 h-8 aspect-square object-contain shrink-0 drop-shadow-[0_0_8px_rgba(0,225,99,0.3)]"
             />
           </div>
-          <span className="font-heading text-xl font-extrabold tracking-tight text-white select-none">
+          <span className="font-heading text-lg sm:text-xl font-extrabold tracking-tight text-white select-none">
             VeloceX
           </span>
         </div>
@@ -271,7 +271,7 @@ export const TradeflareHeader: React.FC<TradeflareHeaderProps> = ({ onOpenAuthMo
           ref={searchContainerRef}
           onMouseEnter={() => setIsSearchHovered(true)}
           onMouseLeave={() => setIsSearchHovered(false)}
-          className="relative w-80 h-10"
+          className="relative hidden md:block w-48 lg:w-80 h-10"
         >
           {/* Base Background Box */}
           <div className="absolute inset-0 rounded-xl bg-[#1F1E25] border border-white/5 pointer-events-none" />
@@ -924,8 +924,8 @@ export const TradeflareHeader: React.FC<TradeflareHeaderProps> = ({ onOpenAuthMo
           </AnimatePresence>
         </div>
 
-        {/* 4. CURRENCY SWITCHER CAPSULE */}
-        <div ref={currencyContainerRef} className="relative">
+        {/* 4. CURRENCY SWITCHER CAPSULE (Hidden on small screens) */}
+        <div ref={currencyContainerRef} className="relative hidden sm:block">
           <div
             onClick={() => {
               setIsCurrencyOpen(!isCurrencyOpen);
@@ -933,7 +933,7 @@ export const TradeflareHeader: React.FC<TradeflareHeaderProps> = ({ onOpenAuthMo
               setIsWalletOpen(false);
               setIsProfileOpen(false);
             }}
-            className={`group relative flex items-center gap-2 h-10 px-3 rounded-xl overflow-hidden bg-[#1F1E25] border cursor-pointer transition-colors duration-1000 ${
+            className={`group relative flex items-center gap-2 h-9 sm:h-10 px-3 rounded-xl overflow-hidden bg-[#1F1E25] border cursor-pointer transition-colors duration-1000 ${
               isCurrencyOpen
                 ? 'border-[#00E163] text-black shadow-[0_0_15px_rgba(0,225,99,0.3)]'
                 : 'border-white/5 hover:border-[#00E163]'
@@ -1017,7 +1017,7 @@ export const TradeflareHeader: React.FC<TradeflareHeaderProps> = ({ onOpenAuthMo
               setIsWalletOpen(false);
               setIsCurrencyOpen(false);
             }}
-            className={`group relative flex items-center gap-2.5 h-11 pl-2 pr-3.5 rounded-xl overflow-hidden bg-[#1F1E25] border cursor-pointer transition-colors duration-1000 ${
+            className={`group relative flex items-center gap-2 h-9 sm:h-11 pl-1.5 sm:pl-2 pr-2.5 sm:pr-3.5 rounded-xl overflow-hidden bg-[#1F1E25] border cursor-pointer transition-colors duration-1000 ${
               isProfileOpen
                 ? 'border-[#00E163] text-black shadow-[0_0_15px_rgba(0,225,99,0.3)]'
                 : 'border-white/5 hover:border-[#00E163]'
@@ -1030,17 +1030,17 @@ export const TradeflareHeader: React.FC<TradeflareHeaderProps> = ({ onOpenAuthMo
               }`}
             />
 
-            <div className="relative z-10 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 group-hover:border-black/20 transition-colors duration-1000">
+            <div className="relative z-10 flex items-center gap-2">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden shrink-0 border border-white/10 group-hover:border-black/20 transition-colors duration-1000">
                 <img
                   src="/avatar.jpg"
-                  alt="Diane Littel Avatar"
+                  alt="Farhan Avatar"
                   className="w-full h-full object-cover"
                 />
               </div>
 
               <div className="flex flex-col text-left leading-tight">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <span
                     className={`text-xs font-bold tracking-wide transition-colors duration-500 ${
                       isProfileOpen ? 'text-black' : 'text-white group-hover:text-black'
@@ -1056,7 +1056,7 @@ export const TradeflareHeader: React.FC<TradeflareHeaderProps> = ({ onOpenAuthMo
                   />
                 </div>
                 <span
-                  className={`text-[10px] font-mono transition-colors duration-500 ${
+                  className={`hidden sm:block text-[10px] font-mono transition-colors duration-500 ${
                     isProfileOpen ? 'text-black/80' : 'text-slate-400 group-hover:text-black/80'
                   }`}
                 >

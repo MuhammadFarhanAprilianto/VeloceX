@@ -447,7 +447,7 @@ export const MessagesView: React.FC<MessagesViewProps> = ({ onOrderSuccess }) =>
   ];
 
   return (
-    <main className="flex flex-col flex-1 p-5 md:p-6 space-y-6 max-w-7xl mx-auto w-full font-sans select-none animate-fade-in text-slate-100">
+    <main className="flex flex-col flex-1 p-3 sm:p-5 md:p-6 pb-24 md:pb-6 space-y-6 max-w-7xl mx-auto w-full font-sans select-none animate-fade-in text-slate-100">
       {/* TAB NAVIGATION BAR (3x2 Grid on Left + 1 Full-Height Live Support Card on Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         {/* Left Side: 3x2 Grid (6 Main Notification Tabs) */}

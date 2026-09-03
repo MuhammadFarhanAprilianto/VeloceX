@@ -13,6 +13,8 @@ import { MyOrdersCard } from '@/components/MyOrdersCard';
 import { OrderFilledCard } from '@/components/OrderFilledCard';
 import { AuthModal } from '@/components/AuthModal';
 import { OrderSuccessModal } from '@/components/OrderSuccessModal';
+import { MobileBottomNav } from '@/components/MobileBottomNav';
+import { MobileNavDrawer } from '@/components/MobileNavDrawer';
 import { AnalyticsView } from '@/components/analytics/AnalyticsView';
 import { WalletView } from '@/components/wallet/WalletView';
 import { OrdersView } from '@/components/orders/OrdersView';
@@ -53,6 +55,7 @@ function TradeflareTerminalContent() {
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Sync state with URL hash on popstate (browser back/forward)
@@ -84,14 +87,14 @@ function TradeflareTerminalContent() {
 
   return (
     <div className="flex w-full min-h-screen bg-[#131118] text-slate-100 font-sans selection:bg-[#00E163] selection:text-black overflow-x-hidden">
-      {/* 1. Left Slim Sidebar (Full Height Edge-to-Edge) */}
+      {/* 1. Left Slim Sidebar (Full Height on Desktop/Laptop/Tablet) */}
       <LeftSidebar
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
 
       {/* 2. Main Dashboard Area (Full Width Edge-to-Edge) */}
-      <div className="flex flex-col flex-1 min-w-0 min-h-screen bg-[#131118]">
+      <div className="flex flex-col flex-1 min-w-0 min-h-screen bg-[#131118] pb-16 md:pb-0">
         {/* Top Header */}
         <TradeflareHeader onOpenAuthModal={() => setIsAuthModalOpen(true)} />
 
@@ -121,22 +124,22 @@ function TradeflareTerminalContent() {
         ) : activeTab === 'help' ? (
           <HelpView onOrderSuccess={handleOrderSuccess} onNavigateTab={handleTabChange} />
         ) : (
-          /* Default 3-Column Trading Workspace Grid */
-          <main className="grid grid-cols-1 lg:grid-cols-12 gap-5 p-5 md:p-6 flex-1 bg-[#131118]">
+          /* Default 3-Column Trading Workspace Grid - Responsive for Mobile, Tablet, Laptop, Desktop */
+          <main className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 p-3 sm:p-5 md:p-6 flex-1 bg-[#131118]">
             {/* Column 1: Watchlist & Running Trades */}
-            <div className="flex flex-col gap-5 lg:col-span-3">
+            <div className="flex flex-col gap-4 sm:gap-5 lg:col-span-3">
               <WatchlistPanel />
               <RunningTradePanel />
             </div>
 
             {/* Column 2: Main Chart & Dual Order Book */}
-            <div className="flex flex-col gap-5 lg:col-span-6">
+            <div className="flex flex-col gap-4 sm:gap-5 lg:col-span-6">
               <MainChartCard />
               <DualOrderBook />
             </div>
 
             {/* Column 3: Create Order, My Order & Order Filled */}
-            <div className="flex flex-col gap-5 lg:col-span-3">
+            <div className="flex flex-col gap-4 sm:gap-5 lg:col-span-3">
               <CreateOrderCard onOrderSuccess={handleOrderSuccess} />
               <MyOrdersCard />
               <OrderFilledCard />
@@ -145,9 +148,24 @@ function TradeflareTerminalContent() {
         )}
       </div>
 
+      {/* Mobile Bottom Navigation Bar (Handphone / Mobile Screens) */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        onOpenMobileMenu={() => setIsMobileNavOpen(true)}
+      />
+
+      {/* Mobile Full Navigation Drawer Modal */}
+      <MobileNavDrawer
+        isOpen={isMobileNavOpen}
+        onClose={() => setIsMobileNavOpen(false)}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
+
       {/* Clean Toast Feedback with HugeIcons */}
       {toastMessage && (
-        <div className="fixed bottom-8 right-8 z-50 flex items-center gap-3 px-5 py-3.5 bg-[#1F1E25] border border-[#00E163]/40 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] text-xs font-bold text-white backdrop-blur-xl animate-fade-in pointer-events-none">
+        <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 flex items-center gap-3 px-5 py-3.5 bg-[#1F1E25] border border-[#00E163]/40 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.6)] text-xs font-bold text-white backdrop-blur-xl animate-fade-in pointer-events-none">
           <div className="w-6 h-6 rounded-lg bg-[#00E163]/15 border border-[#00E163]/30 flex items-center justify-center text-[#00E163] shrink-0">
             <Tick01Icon className="w-3.5 h-3.5 stroke-[3]" />
           </div>

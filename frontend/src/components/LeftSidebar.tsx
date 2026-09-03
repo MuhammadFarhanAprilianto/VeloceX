@@ -112,7 +112,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   };
 
   return (
-    <aside className="flex flex-col items-center justify-between w-16 min-h-screen py-4 bg-[#131118] border-r border-white/5 select-none shrink-0 z-30">
+    <aside className="hidden md:flex flex-col items-center justify-between w-16 min-h-screen py-4 bg-[#131118] border-r border-white/5 select-none shrink-0 z-30">
       {/* Top Main Navigation */}
       <div className="flex flex-col items-center gap-2">
         {TOP_NAV_ITEMS.map(renderNavButton)}

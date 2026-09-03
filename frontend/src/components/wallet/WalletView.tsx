@@ -622,9 +622,9 @@ export const WalletView: React.FC<WalletViewProps> = ({ onOrderSuccess }) => {
   };
 
   return (
-    <main className="flex flex-col flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full font-sans select-none animate-fade-in text-slate-100">
+    <main className="flex flex-col flex-1 p-3 sm:p-6 space-y-6 max-w-7xl mx-auto w-full font-sans select-none animate-fade-in text-slate-100 pb-24 md:pb-6">
       {/* 1. TOP OVERVIEW VALUATION HERO CARD */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between p-6 sm:p-8 rounded-3xl bg-[#1F1E25] border border-white/10 shadow-2xl relative overflow-hidden gap-6">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between p-4 sm:p-8 rounded-3xl bg-[#1F1E25] border border-white/10 shadow-2xl relative overflow-hidden gap-6">
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#00E163]/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
         <div className="flex flex-col gap-2 z-10">

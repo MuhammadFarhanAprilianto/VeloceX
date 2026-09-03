@@ -1059,7 +1059,7 @@ export const ProChartsView: React.FC = () => {
   }, [activeCategory, searchFilter]);
 
   return (
-    <div className="flex flex-col w-full h-[calc(100vh-68px)] bg-[#131118] text-slate-200 overflow-hidden select-none font-sans">
+    <div className="flex flex-col w-full h-[calc(100vh-120px)] md:h-[calc(100vh-68px)] bg-[#131118] text-slate-200 overflow-hidden select-none font-sans">
       {/* Toast Alert */}
       {toastMsg && (
         <div className="fixed top-20 right-6 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#1F1E25] border border-[#2962FF] text-white shadow-2xl animate-fade-in">
@@ -1069,7 +1069,7 @@ export const ProChartsView: React.FC = () => {
       )}
 
       {/* TOP TRADINGVIEW PRO TOOLBAR */}
-      <div className="flex items-center justify-between px-3.5 py-2 bg-[#18171E] border-b border-white/5 flex-shrink-0 gap-3 z-30 overflow-visible">
+      <div className="flex flex-wrap items-center justify-between px-2 sm:px-3.5 py-2 bg-[#18171E] border-b border-white/5 flex-shrink-0 gap-2 sm:gap-3 z-30 overflow-visible">
         {/* Left: Asset Switcher Dropdown + O,H,L,C Header Stats */}
         <div className="flex items-center gap-3 overflow-visible">
           {/* Asset Dropdown Trigger matching Image 1 */}

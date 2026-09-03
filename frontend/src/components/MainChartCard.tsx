@@ -275,7 +275,7 @@ export const MainChartCard: React.FC = () => {
   return (
     <div className="flex flex-col w-full bg-[#1F1E25] border border-white/5 rounded-3xl p-5 select-none transition-all">
       {/* Top Header Row */}
-      <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
         {/* Left: Big Asset Logo + Name & Price */}
         <div className="flex items-center gap-3.5">
           <MarketIcon symbol={selectedSymbol} size="lg" />
@@ -304,7 +304,7 @@ export const MainChartCard: React.FC = () => {
         </div>
 
         {/* Right: Unified Single Connected Card with 2 Interactive Clickable Sub-Buttons */}
-        <div className="flex items-center p-1 bg-[#26252E] border border-white/5 rounded-2xl gap-1 self-start">
+        <div className="flex items-center p-1 bg-[#26252E] border border-white/5 rounded-2xl gap-1 self-start sm:self-auto">
           {/* 24 Hours Movement Button */}
           <button
             type="button"
@@ -368,9 +368,9 @@ export const MainChartCard: React.FC = () => {
       </div>
 
       {/* Sub-Header Controls Row */}
-      <div className="flex items-center justify-between pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3">
         {/* Timeframe Selector */}
-        <div className="flex items-center p-1 bg-[#26252E] border border-white/5 rounded-2xl text-xs font-bold gap-1">
+        <div className="flex items-center p-1 bg-[#26252E] border border-white/5 rounded-2xl text-xs font-bold gap-1 overflow-x-auto max-w-full">
           {(['1D', '7D', '1M', '3M', '1Y', 'All'] as const).map((tf) => {
             const isActive = timeframe === tf;
             return (

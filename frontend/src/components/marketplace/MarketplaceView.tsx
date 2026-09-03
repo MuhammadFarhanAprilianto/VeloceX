@@ -252,7 +252,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-[1600px] mx-auto w-full font-sans animate-fade-in text-slate-100">
+    <div className="flex flex-col gap-6 p-3 sm:p-5 md:p-6 pb-24 md:pb-6 max-w-[1600px] mx-auto w-full font-sans animate-fade-in text-slate-100">
       {/* 1. EXECUTIVE MARKET OVERVIEW HEADER */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#18171E] via-[#1F1E25] to-[#18171E] border border-white/5 p-6 md:p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 shadow-2xl">
         <div className="flex flex-col gap-2">

@@ -584,7 +584,7 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
   const candleData = getCandleGeometry();
 
   return (
-    <div className="flex flex-col gap-5 p-6 max-w-[1600px] mx-auto w-full font-sans animate-fade-in text-slate-100">
+    <div className="flex flex-col gap-5 p-3 sm:p-5 md:p-6 pb-24 md:pb-6 max-w-[1600px] mx-auto w-full font-sans animate-fade-in text-slate-100">
       {/* 1. TOP HEADER & EMERGENCY ACTION BAR */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#18171E] via-[#1F1E25] to-[#18171E] border border-white/5 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-2xl">
         <div className="flex flex-col gap-2 z-10 max-w-xl">

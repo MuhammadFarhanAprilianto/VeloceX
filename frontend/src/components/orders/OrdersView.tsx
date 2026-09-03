@@ -836,7 +836,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOrderSuccess }) => {
   };
 
   return (
-    <main className="flex flex-col flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full font-sans select-none animate-fade-in text-slate-100">
+    <main className="flex flex-col flex-1 p-3 sm:p-6 space-y-6 max-w-7xl mx-auto w-full font-sans select-none animate-fade-in text-slate-100 pb-24 md:pb-6">
       {/* 1. TOP SUMMARY HERO BAR (ORDERS METRICS) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Capital in Open Orders */}
