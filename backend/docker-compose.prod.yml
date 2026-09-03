@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL High-Performance Production Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: velocex-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-VeloceXStrongProdPass2026!}
+      POSTGRES_DB: ${DB_NAME:-velocex_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Redis Fast In-Memory Cache & WebSocket PubSub
+  redis:
+    image: redis:7-alpine
+    container_name: velocex-redis-prod
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata_prod:/data
+
+  # 3. VeloceX Core Trading & Order Engine (Go Backend)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: velocex-backend-prod
+    restart: always
+    environment:
+      SERVER_PORT: 8080
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-VeloceXStrongProdPass2026!}
+      DB_NAME: ${DB_NAME:-velocex_db}
+      JWT_SECRET: ${JWT_SECRET:-VeloceXUltraSecureJWTSecret2026ProductionKey}
+      GIN_MODE: release
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+  # 4. Nginx Reverse Proxy with SSL & DDoS Rate Limiting
+  nginx:
+    image: nginx:alpine
+    container_name: velocex-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+
+volumes:
+  pgdata_prod:
+  redisdata_prod:
