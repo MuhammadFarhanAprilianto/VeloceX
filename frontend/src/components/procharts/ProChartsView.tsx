@@ -24,6 +24,7 @@ import {
 } from 'hugeicons-react';
 import { useTradingStore } from '@/store/useTradingStore';
 import { MarketIcon } from '@/components/MarketIcon';
+import { Candlestick } from '@/types/trading';
 
 interface ProAsset {
   id: string;
@@ -42,31 +43,31 @@ interface ProAsset {
 }
 
 export const PRO_ASSETS: ProAsset[] = [
-  // 1. INDICES (3 Aset)
+  // 1. INDICES (3 Aset - OANDA Specifications)
   { id: 'SPX', symbol: 'SPX500', name: 'S&P 500 Index', category: 'indices', price: 5648.40, change: 35.13, changePct: 0.46, high24h: 5665.00, low24h: 5580.00, volume: '2.84B', decimals: 2, prefix: '$' },
   { id: 'NDQ', symbol: 'NAS100', name: 'Nasdaq 100', category: 'indices', price: 19720.50, change: 66.11, changePct: 0.23, high24h: 19810.00, low24h: 19340.00, volume: '3.41B', decimals: 2, prefix: '$' },
   { id: 'DJI', symbol: 'US30', name: 'Dow Jones 30', category: 'indices', price: 41250.00, change: 295.05, changePct: 0.56, high24h: 41380.00, low24h: 40850.00, volume: '1.95B', decimals: 2, prefix: '$' },
 
-  // 2. CRYPTO (6 Aset) - Direct Live Binance API
-  { id: 'BTC', symbol: 'BTCUSDT', name: 'Bitcoin', category: 'crypto', price: 75479.00, change: 1811.50, changePct: 2.40, high24h: 76200.00, low24h: 71800.00, volume: '27.96B', decimals: 2, prefix: '$', binanceSymbol: 'BTCUSDT' },
+  // 2. CRYPTO (6 Aset - OANDA Specifications)
+  { id: 'BTC', symbol: 'BTCUSDT', name: 'Bitcoin', category: 'crypto', price: 75368.45, change: 1811.50, changePct: 2.40, high24h: 76200.00, low24h: 71800.00, volume: '27.96B', decimals: 2, prefix: '$', binanceSymbol: 'BTCUSDT' },
   { id: 'ETH', symbol: 'ETHUSDT', name: 'Ethereum', category: 'crypto', price: 4149.74, change: 75.80, changePct: 1.86, high24h: 4210.00, low24h: 3980.00, volume: '14.80B', decimals: 2, prefix: '$', binanceSymbol: 'ETHUSDT' },
   { id: 'SOL', symbol: 'SOLUSDT', name: 'Solana', category: 'crypto', price: 175.03, change: 3.32, changePct: 1.94, high24h: 178.50, low24h: 154.20, volume: '6.50B', decimals: 2, prefix: '$', binanceSymbol: 'SOLUSDT' },
   { id: 'BNB', symbol: 'BNBUSDT', name: 'BNB Chain', category: 'crypto', price: 614.35, change: 30.40, changePct: 5.20, high24h: 622.00, low24h: 598.00, volume: '2.80B', decimals: 2, prefix: '$', binanceSymbol: 'BNBUSDT' },
   { id: 'LTC', symbol: 'LTCUSDT', name: 'Litecoin', category: 'crypto', price: 94.92, change: 20.10, changePct: 26.83, high24h: 96.40, low24h: 89.80, volume: '1.40B', decimals: 2, prefix: '$', binanceSymbol: 'LTCUSDT' },
-  { id: 'ADA', symbol: 'ADAUSDT', name: 'Cardano', category: 'crypto', price: 0.5620, change: 0.06, changePct: 12.04, high24h: 0.5840, low24h: 0.5520, volume: '954M', decimals: 4, prefix: '$', binanceSymbol: 'ADAUSDT' },
+  { id: 'ADA', symbol: 'ADAUSDT', name: 'Cardano', category: 'crypto', price: 0.5600, change: 0.06, changePct: 12.04, high24h: 0.5840, low24h: 0.5520, volume: '954M', decimals: 4, prefix: '$', binanceSymbol: 'ADAUSDT' },
 
-  // 3. COMMODITIES & CFD (3 Aset)
+  // 3. COMMODITIES & CFD (3 Aset - OANDA Specifications)
   { id: 'GOLD', symbol: 'XAUUSD', name: 'CFDs on Gold (US$ / OZ)', category: 'cfd', price: 2514.80, change: 34.68, changePct: 0.79, high24h: 2528.00, low24h: 2420.00, volume: '3.12B', decimals: 2, prefix: '$', binanceSymbol: 'PAXGUSDT' },
   { id: 'SILVER', symbol: 'XAGUSD', name: 'Silver (US$ / OZ)', category: 'cfd', price: 29.45, change: 0.30, changePct: 0.47, high24h: 29.90, low24h: 28.10, volume: '480M', decimals: 2, prefix: '$' },
   { id: 'USOIL', symbol: 'USOIL', name: 'Crude Oil WTI', category: 'cfd', price: 74.60, change: 1.84, changePct: 2.03, high24h: 75.80, low24h: 73.10, volume: '920M', decimals: 2, prefix: '$' },
 
-  // 4. FOREX (6 Aset)
-  { id: 'EURUSD', symbol: 'EURUSD', name: 'EUR / USD', category: 'forex', price: 1.0842, change: 0.0013, changePct: 0.12, high24h: 1.0875, low24h: 1.0790, volume: '2.15B', decimals: 4, prefix: '', binanceSymbol: 'EURUSDT' },
-  { id: 'GBPUSD', symbol: 'GBPUSD', name: 'GBP / USD', category: 'forex', price: 1.2915, change: 0.0170, changePct: 1.34, high24h: 1.2950, low24h: 1.2820, volume: '1.48B', decimals: 4, prefix: '', binanceSymbol: 'GBPUSDT' },
-  { id: 'USDJPY', symbol: 'USDJPY', name: 'USD / JPY', category: 'forex', price: 154.60, change: -0.37, changePct: -0.24, high24h: 155.40, low24h: 153.90, volume: '1.89B', decimals: 2, prefix: '¥' },
-  { id: 'AUDUSD', symbol: 'AUDUSD', name: 'AUD / USD', category: 'forex', price: 0.6580, change: 0.0029, changePct: 0.45, high24h: 0.6610, low24h: 0.6520, volume: '820M', decimals: 4, prefix: '', binanceSymbol: 'AUDUSDT' },
-  { id: 'USDCAD', symbol: 'USDCAD', name: 'USD / CAD', category: 'forex', price: 1.3820, change: -0.0025, changePct: -0.18, high24h: 1.3860, low24h: 1.3790, volume: '710M', decimals: 4, prefix: '' },
-  { id: 'USDCHF', symbol: 'USDCHF', name: 'USD / CHF', category: 'forex', price: 0.8840, change: 0.0007, changePct: 0.08, high24h: 0.8870, low24h: 0.8805, volume: '590M', decimals: 4, prefix: '' },
+  // 4. FOREX (6 Aset - 5 Desimal OANDA Pipettes / 3 Desimal JPY)
+  { id: 'EURUSD', symbol: 'EURUSD', name: 'EUR / USD', category: 'forex', price: 1.15571, change: 0.0013, changePct: 0.12, high24h: 1.1585, low24h: 1.1520, volume: '2.15B', decimals: 5, prefix: '', binanceSymbol: 'EURUSDT' },
+  { id: 'GBPUSD', symbol: 'GBPUSD', name: 'GBP / USD', category: 'forex', price: 1.29152, change: 0.0170, changePct: 1.34, high24h: 1.2950, low24h: 1.2820, volume: '1.48B', decimals: 5, prefix: '', binanceSymbol: 'GBPUSDT' },
+  { id: 'USDJPY', symbol: 'USDJPY', name: 'USD / JPY', category: 'forex', price: 154.603, change: -0.37, changePct: -0.24, high24h: 155.40, low24h: 153.90, volume: '1.89B', decimals: 3, prefix: '¥' },
+  { id: 'AUDUSD', symbol: 'AUDUSD', name: 'AUD / USD', category: 'forex', price: 0.65804, change: 0.0029, changePct: 0.45, high24h: 0.6610, low24h: 0.6520, volume: '820M', decimals: 5, prefix: '', binanceSymbol: 'AUDUSDT' },
+  { id: 'USDCAD', symbol: 'USDCAD', name: 'USD / CAD', category: 'forex', price: 1.38202, change: -0.0025, changePct: -0.18, high24h: 1.3860, low24h: 1.3790, volume: '710M', decimals: 5, prefix: '' },
+  { id: 'USDCHF', symbol: 'USDCHF', name: 'USD / CHF', category: 'forex', price: 0.88401, change: 0.0007, changePct: 0.08, high24h: 0.8870, low24h: 0.8805, volume: '590M', decimals: 5, prefix: '' },
 ];
 
 // Anchored Drawn Line bound to Time & Price per Symbol
@@ -159,12 +160,37 @@ function sanitizeCandleData(data: { candles: CandlestickData<Time>[]; volume: Hi
   return { candles: cleanCandles, volume: cleanVolume };
 }
 
-// Generate Authentic TradingView Candlesticks with Crisp, Prominent Upper & Lower Wicks (Matching Image 2)
+const OANDA_CALIBRATION_CONFIG: Record<
+  string,
+  { decimals: number; volatility: number; waveCycles: number; amp: number }
+> = {
+  EURUSD: { decimals: 5, volatility: 0.00009, waveCycles: 2.2, amp: 3.2 },
+  GBPUSD: { decimals: 5, volatility: 0.0001, waveCycles: 2.5, amp: 3.5 },
+  USDJPY: { decimals: 3, volatility: 0.00012, waveCycles: 2.0, amp: 3.0 },
+  AUDUSD: { decimals: 5, volatility: 0.0001, waveCycles: 2.3, amp: 3.4 },
+  USDCAD: { decimals: 5, volatility: 0.0001, waveCycles: 2.1, amp: 3.2 },
+  USDCHF: { decimals: 5, volatility: 0.00009, waveCycles: 2.0, amp: 3.0 },
+  XAUUSD: { decimals: 2, volatility: 0.00014, waveCycles: 2.4, amp: 3.0 },
+  XAGUSD: { decimals: 2, volatility: 0.00028, waveCycles: 2.2, amp: 3.2 },
+  USOIL: { decimals: 2, volatility: 0.00022, waveCycles: 2.0, amp: 3.0 },
+  SPX500: { decimals: 2, volatility: 0.00007, waveCycles: 2.1, amp: 2.8 },
+  NAS100: { decimals: 2, volatility: 0.00009, waveCycles: 2.3, amp: 3.0 },
+  US30: { decimals: 2, volatility: 0.00007, waveCycles: 2.0, amp: 2.8 },
+  BTCUSDT: { decimals: 2, volatility: 0.00025, waveCycles: 2.5, amp: 3.2 },
+  ETHUSDT: { decimals: 2, volatility: 0.0003, waveCycles: 2.5, amp: 3.2 },
+  SOLUSDT: { decimals: 2, volatility: 0.00045, waveCycles: 2.6, amp: 3.5 },
+  BNBUSDT: { decimals: 2, volatility: 0.00025, waveCycles: 2.4, amp: 3.0 },
+  LTCUSDT: { decimals: 2, volatility: 0.00035, waveCycles: 2.3, amp: 3.2 },
+  ADAUSDT: { decimals: 4, volatility: 0.0004, waveCycles: 2.5, amp: 3.2 },
+};
+
+// Generate Authentic TradingView Candlesticks with Crisp, Prominent Upper & Lower Wicks
 function generateAuthenticTradingViewCandles(
   basePrice: number,
   decimals: number,
   count: number,
-  intervalSec: number
+  intervalSec: number,
+  symbol?: string
 ): { candles: CandlestickData<Time>[]; volume: HistogramData<Time>[] } {
   const candles: CandlestickData<Time>[] = [];
   const volume: HistogramData<Time>[] = [];
@@ -173,34 +199,32 @@ function generateAuthenticTradingViewCandles(
   const currentBucket = Math.floor(nowSec / intervalSec) * intervalSec;
   const startTime = currentBucket - (count - 1) * intervalSec;
 
-  const volatility = basePrice < 2 ? 0.0006 : basePrice < 100 ? 0.0012 : 0.0008;
-  let currentPrice = basePrice * (1.0 - 0.004);
+  const oandaConf = symbol ? OANDA_CALIBRATION_CONFIG[symbol] : null;
+  const volatility = oandaConf ? oandaConf.volatility : basePrice < 2 ? 0.00008 : 0.0005;
+  const waveCycles = oandaConf ? oandaConf.waveCycles : 2.2;
+  const amp = oandaConf ? oandaConf.amp : 3.5;
+
+  let currentPrice = basePrice * (1.0 - volatility * 2.0);
 
   for (let i = 0; i < count; i++) {
     const time = (startTime + i * intervalSec) as Time;
-
-    // Organic micro-trend oscillation
-    const trendCycle = Math.sin(i * 0.08) * (currentPrice * volatility * 0.7);
-    const randomShock = (Math.random() - 0.495) * (currentPrice * volatility * 1.6);
-    const delta = trendCycle + randomShock;
+    const progress = i / count;
+    const sessionShape = Math.sin(progress * Math.PI * waveCycles) * (basePrice * volatility * amp);
+    const subWave = Math.cos(progress * Math.PI * 4.5) * (basePrice * volatility * 1.1);
+    const randomShock = (Math.random() - 0.49) * (basePrice * volatility * 1.4);
+    const targetP = basePrice + sessionShape + subWave + randomShock;
 
     const open = currentPrice;
-    const close = open + delta;
+    const close = targetP;
 
-    // Prominent, crisp TradingView upper and lower wicks (matching Image 2)
     const bodyHeight = Math.abs(close - open);
-    const minWick = currentPrice * volatility * 0.6;
-    const upperWickMultiplier = Math.random() < 0.25 ? 2.8 : Math.random() < 0.5 ? 1.6 : 0.9;
-    const lowerWickMultiplier = Math.random() < 0.25 ? 2.8 : Math.random() < 0.5 ? 1.6 : 0.9;
-
-    const upperWick = Math.max(minWick, bodyHeight * upperWickMultiplier * Math.random() + (currentPrice * volatility * 0.5));
-    const lowerWick = Math.max(minWick, bodyHeight * lowerWickMultiplier * Math.random() + (currentPrice * volatility * 0.5));
+    const minWick = basePrice * volatility * 0.35;
+    const upperWick = Math.max(minWick, bodyHeight * (Math.random() * 0.85)) + basePrice * volatility * 0.3;
+    const lowerWick = Math.max(minWick, bodyHeight * (Math.random() * 0.85)) + basePrice * volatility * 0.3;
 
     const high = Math.max(open, close) + upperWick;
     const low = Math.min(open, close) - lowerWick;
-
-    const isUp = close >= open;
-    const vol = Math.floor(80 + Math.random() * 420 + (bodyHeight / (currentPrice * volatility)) * 200);
+    const vol = Math.floor(40 + Math.random() * 120);
 
     candles.push({
       time,
@@ -213,10 +237,17 @@ function generateAuthenticTradingViewCandles(
     volume.push({
       time,
       value: vol,
-      color: isUp ? 'rgba(0, 225, 99, 0.35)' : 'rgba(255, 92, 119, 0.35)',
+      color: close >= open ? 'rgba(0, 225, 99, 0.35)' : 'rgba(255, 92, 119, 0.35)',
     });
 
     currentPrice = close;
+  }
+
+  if (candles.length > 0) {
+    const last = candles[candles.length - 1];
+    last.close = Number(basePrice.toFixed(decimals));
+    last.high = Number(Math.max(last.high, basePrice).toFixed(decimals));
+    last.low = Number(Math.min(last.low, basePrice).toFixed(decimals));
   }
 
   return sanitizeCandleData({ candles, volume });
@@ -239,7 +270,8 @@ export const ProChartsView: React.FC = () => {
     return PRO_ASSETS.find((a) => a.symbol === selectedSymbol) || PRO_ASSETS[0];
   });
 
-  const [activeTimeframe, setActiveTimeframe] = useState<'1s' | '1m' | '5m' | '15m' | '1h' | '4h' | '1D' | '1W'>('1m');
+  const [chartType, setChartType] = useState<'Candle' | 'Line'>('Candle');
+  const [activeTimeframe, setActiveTimeframe] = useState<'1m' | '5m' | '15m' | '1h' | '4h' | '1D'>('1m');
   const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   const [activeCategory, setActiveCategory] = useState<'all' | 'indices' | 'crypto' | 'cfd' | 'forex'>('all');
@@ -338,6 +370,7 @@ export const ProChartsView: React.FC = () => {
   const drawingLayerRef = useRef<SVGSVGElement>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const areaSeriesRef = useRef<ISeriesApi<'Area'> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const currentCandlesRef = useRef<{ candles: CandlestickData<Time>[]; volume: HistogramData<Time>[] }>({
@@ -390,148 +423,102 @@ export const ProChartsView: React.FC = () => {
 
   // Convert Screen Coordinates (x, y) to Time & Price
   const screenToTimePrice = useCallback((x: number, y: number) => {
-    if (!chartApiRef.current || !candleSeriesRef.current) return null;
+    if (!chartApiRef.current) return null;
+    const activeSeries = candleSeriesRef.current || areaSeriesRef.current;
+    if (!activeSeries) return null;
     const time = chartApiRef.current.timeScale().coordinateToTime(x);
-    const price = candleSeriesRef.current.coordinateToPrice(y);
+    const price = activeSeries.coordinateToPrice(y);
     return { time: time ? Number(time) : Math.floor(Date.now() / 1000), price: price ?? selectedAsset.price };
   }, [selectedAsset.price]);
 
   // Convert Time & Price to Screen (x, y)
   const timePriceToScreen = useCallback((time: number, price: number): { x: number; y: number } | null => {
-    if (!chartApiRef.current || !candleSeriesRef.current) return null;
+    if (!chartApiRef.current) return null;
+    const activeSeries = candleSeriesRef.current || areaSeriesRef.current;
+    if (!activeSeries) return null;
     const x = chartApiRef.current.timeScale().timeToCoordinate(time as Time);
-    const y = candleSeriesRef.current.priceToCoordinate(price);
+    const y = activeSeries.priceToCoordinate(price);
     if (x === null || y === null) return null;
     return { x: Number(x), y: Number(y) };
   }, []);
 
-  // Load Real-Market Candles with Persistent Storage (Does NOT restart on refresh)
+  // Load Real-Market Candles with Persistent Storage & Zero Vertical Spike
   const loadCandleData = useCallback(async (asset: ProAsset, tf: string) => {
-    const storageKey = `velocex_v4_candles_${asset.symbol}_${tf}`;
+    const storageKey = `velocex_v5_candles_${asset.symbol}_${tf}`;
     const intervalSec = tf === '1s' ? 1 : tf === '1m' ? 60 : tf === '5m' ? 300 : tf === '15m' ? 900 : tf === '1h' ? 3600 : tf === '4h' ? 14400 : 86400;
+    const currentTicker = tickers[asset.symbol];
+    const centerPrice = currentTicker?.price ?? asset.price;
 
-    // 1. Try fetching from Live Binance API if symbol or binanceSymbol is available
-    const bSymbol = asset.binanceSymbol || (asset.category === 'crypto' ? asset.symbol : null);
-    if (bSymbol) {
-      try {
-        const binanceTfMap: Record<string, string> = {
-          '1s': '1s',
-          '1m': '1m',
-          '5m': '5m',
-          '15m': '15m',
-          '1h': '1h',
-          '4h': '4h',
-          '1D': '1d',
-          '1W': '1w',
-        };
-        const binanceInterval = binanceTfMap[tf] || '1m';
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
+    // 1. Primary: Fetch real-market candles from /api/market/candles
+    try {
+      const res = await fetch(`/api/market/candles?symbol=${asset.symbol}&limit=150`);
+      if (res.ok) {
+        const apiData: Candlestick[] = await res.json();
+        if (Array.isArray(apiData) && apiData.length > 0) {
+          const lastApiClose = apiData[apiData.length - 1].close;
+          const ratio = centerPrice / lastApiClose;
 
-        const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${bSymbol}&interval=${binanceInterval}&limit=200`, {
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
+          const candles: CandlestickData<Time>[] = [];
+          const volume: HistogramData<Time>[] = [];
 
-        if (res.ok) {
-          const rawKlines = await res.json();
-          if (Array.isArray(rawKlines) && rawKlines.length > 0) {
-            const candles: CandlestickData<Time>[] = [];
-            const volume: HistogramData<Time>[] = [];
+          for (const c of apiData) {
+            const open = Number((c.open * ratio).toFixed(asset.decimals));
+            const high = Number((c.high * ratio).toFixed(asset.decimals));
+            const low = Number((c.low * ratio).toFixed(asset.decimals));
+            const close = Number((c.close * ratio).toFixed(asset.decimals));
+            const isUp = close >= open;
 
-            for (const item of rawKlines) {
-              const time = Math.floor(item[0] / 1000) as Time;
-              const open = Number(parseFloat(item[1]).toFixed(asset.decimals));
-              const high = Number(parseFloat(item[2]).toFixed(asset.decimals));
-              const low = Number(parseFloat(item[3]).toFixed(asset.decimals));
-              const close = Number(parseFloat(item[4]).toFixed(asset.decimals));
-              const vol = parseFloat(item[5]);
+            candles.push({
+              time: c.time as Time,
+              open,
+              high,
+              low,
+              close,
+            });
 
-              candles.push({ time, open, high, low, close });
-              volume.push({
-                time,
-                value: vol,
-                color: close >= open ? 'rgba(0, 225, 99, 0.35)' : 'rgba(255, 92, 119, 0.35)',
-              });
-            }
-
-            const cleanBinance = sanitizeCandleData({ candles, volume });
-            try {
-              localStorage.setItem(storageKey, JSON.stringify(cleanBinance));
-            } catch (_) {}
-
-            return cleanBinance;
+            volume.push({
+              time: c.time as Time,
+              value: c.volume || Math.floor(60 + Math.random() * 200),
+              color: isUp ? 'rgba(0, 225, 99, 0.35)' : 'rgba(255, 92, 119, 0.35)',
+            });
           }
-        }
-      } catch (_) {}
-    }
 
-    // 2. Check LocalStorage for persistent continuous data
+          if (candles.length > 0) {
+            const last = candles[candles.length - 1];
+            last.close = centerPrice;
+            last.high = Math.max(last.high, centerPrice);
+            last.low = Math.min(last.low, centerPrice);
+          }
+
+          const cleanData = sanitizeCandleData({ candles, volume });
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(cleanData));
+          } catch (_) {}
+
+          return cleanData;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fallback: LocalStorage cached data
     try {
       const cached = localStorage.getItem(storageKey);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.candles && parsed.candles.length > 0) {
-          const cleanCached = sanitizeCandleData(parsed);
-          const lastCandle = cleanCached.candles[cleanCached.candles.length - 1];
-          const nowSec = Math.floor(Date.now() / 1000);
-
-          if (lastCandle && nowSec - Number(lastCandle.time) < 86400 * 7) {
-            let lastTime = Number(lastCandle.time);
-            let lastClose = lastCandle.close;
-
-            while (lastTime + intervalSec <= nowSec) {
-              lastTime += intervalSec;
-              const spread = asset.price < 2 ? 0.0006 : asset.price < 100 ? 0.0012 : 0.0008;
-              const delta = (Math.random() - 0.495) * (lastClose * spread * 1.5);
-              const open = lastClose;
-              const close = Number((open + delta).toFixed(asset.decimals));
-              const body = Math.abs(close - open);
-              const wick = Math.max(lastClose * spread * 0.8, body * 1.5 * Math.random());
-              const high = Number((Math.max(open, close) + wick).toFixed(asset.decimals));
-              const low = Number((Math.min(open, close) - wick).toFixed(asset.decimals));
-
-              cleanCached.candles.push({
-                time: lastTime as Time,
-                open,
-                high,
-                low,
-                close,
-              });
-
-              cleanCached.volume.push({
-                time: lastTime as Time,
-                value: Math.floor(50 + Math.random() * 200),
-                color: close >= open ? 'rgba(0, 225, 99, 0.35)' : 'rgba(255, 92, 119, 0.35)',
-              });
-
-              lastClose = close;
-            }
-
-            if (cleanCached.candles.length > 200) {
-              cleanCached.candles = cleanCached.candles.slice(cleanCached.candles.length - 200);
-              cleanCached.volume = cleanCached.volume.slice(cleanCached.volume.length - 200);
-            }
-
-            const finalized = sanitizeCandleData(cleanCached);
-            try {
-              localStorage.setItem(storageKey, JSON.stringify(finalized));
-            } catch (_) {}
-
-            return finalized;
-          }
+          return sanitizeCandleData(parsed);
         }
       }
     } catch (_) {}
 
-    // 3. Generate Authentic TradingView Candlesticks with Crisp Wicks
-    const freshData = generateAuthenticTradingViewCandles(asset.price, asset.decimals, 180, intervalSec);
+    // 3. Fallback: Synthesize authentic OANDA candles tailored for this symbol
+    const freshData = generateAuthenticTradingViewCandles(centerPrice, asset.decimals, 150, intervalSec, asset.symbol);
     try {
       localStorage.setItem(storageKey, JSON.stringify(freshData));
     } catch (_) {}
 
     return freshData;
-  }, []);
+  }, [tickers]);
 
   // Mount and Render Real-Market Lightweight Charts
   useEffect(() => {
@@ -591,7 +578,7 @@ export const ProChartsView: React.FC = () => {
       timeScale: {
         borderColor: 'rgba(255, 255, 255, 0.08)',
         timeVisible: true,
-        secondsVisible: activeTimeframe === '1s',
+        secondsVisible: false,
         barSpacing: 9,
         minBarSpacing: 4,
         rightOffset: 12,
@@ -606,7 +593,7 @@ export const ProChartsView: React.FC = () => {
 
     chartApiRef.current = chart;
 
-    // 1. Candlestick Series with crisp TradingView wicks (matching Image 2)
+    // 1. Candlestick Series with crisp TradingView wicks
     const candleSeries = chart.addCandlestickSeries({
       upColor: '#00E163',
       downColor: '#FF5C77',
@@ -619,10 +606,28 @@ export const ProChartsView: React.FC = () => {
         precision: selectedAsset.decimals,
         minMove: Math.pow(10, -selectedAsset.decimals),
       },
+      visible: chartType === 'Candle',
     });
     candleSeriesRef.current = candleSeries;
 
-    // 2. Volume Histogram Series
+    // 2. Area Series (Line View)
+    const isUpInitial = (tickers[selectedAsset.symbol]?.change_percent ?? selectedAsset.changePct) >= 0;
+    const areaSeries = chart.addAreaSeries({
+      topColor: isUpInitial ? 'rgba(0, 225, 99, 0.28)' : 'rgba(255, 92, 119, 0.28)',
+      bottomColor: 'rgba(0, 225, 99, 0.00)',
+      lineColor: isUpInitial ? '#00E163' : '#FF5C77',
+      lineWidth: 2,
+      priceLineVisible: true,
+      priceFormat: {
+        type: 'price',
+        precision: selectedAsset.decimals,
+        minMove: Math.pow(10, -selectedAsset.decimals),
+      },
+      visible: chartType === 'Line',
+    });
+    areaSeriesRef.current = areaSeries;
+
+    // 3. Volume Histogram Series
     const volumeSeries = chart.addHistogramSeries({
       priceFormat: {
         type: 'volume',
@@ -639,12 +644,13 @@ export const ProChartsView: React.FC = () => {
 
     // Load data asynchronously and set to chart
     loadCandleData(selectedAsset, activeTimeframe).then((marketData) => {
-      if (!isMounted || !candleSeriesRef.current || !volumeSeriesRef.current) return;
+      if (!isMounted || !candleSeriesRef.current || !volumeSeriesRef.current || !areaSeriesRef.current) return;
       currentCandlesRef.current = {
         candles: [...marketData.candles],
         volume: [...marketData.volume],
       };
       candleSeriesRef.current.setData(marketData.candles);
+      areaSeriesRef.current.setData(marketData.candles.map((c) => ({ time: c.time, value: c.close })));
       volumeSeriesRef.current.setData(marketData.volume);
 
       chart.timeScale().fitContent();
@@ -669,27 +675,29 @@ export const ProChartsView: React.FC = () => {
       }
 
       const barData = param.seriesData.get(candleSeries) as CandlestickData<Time> | undefined;
+      const lineData = areaSeriesRef.current ? (param.seriesData.get(areaSeriesRef.current) as any) : undefined;
       const volData = volumeSeriesRef.current ? (param.seriesData.get(volumeSeriesRef.current) as HistogramData<Time> | undefined) : undefined;
 
-      if (barData) {
-        const isUp = barData.close >= barData.open;
-        setHoveredData({
-          open: barData.open,
-          high: barData.high,
-          low: barData.low,
-          close: barData.close,
-          volume: volData ? volData.value : 0,
-          time: new Date(Number(param.time) * 1000).toLocaleDateString('id-ID', {
-            month: 'short',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-          }),
-          isUp,
-        });
-      }
+      const closeVal = barData ? barData.close : lineData ? lineData.value : selectedAsset.price;
+      const openVal = barData ? barData.open : closeVal;
+      const highVal = barData ? barData.high : closeVal;
+      const lowVal = barData ? barData.low : closeVal;
+
+      setHoveredData({
+        open: openVal,
+        high: highVal,
+        low: lowVal,
+        close: closeVal,
+        volume: volData ? volData.value : 0,
+        time: new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Asia/Jakarta',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }).format(new Date(Number(param.time) * 1000)),
+        isUp: closeVal >= openVal,
+      });
     });
 
     const handleResize = () => {
@@ -712,21 +720,40 @@ export const ProChartsView: React.FC = () => {
     };
   }, [selectedAsset, activeTimeframe, loadCandleData]);
 
+  // Handle Candle vs Line Toggle Visibility
+  useEffect(() => {
+    if (!chartApiRef.current) return;
+    try {
+      if (candleSeriesRef.current) {
+        candleSeriesRef.current.applyOptions({
+          visible: chartType === 'Candle',
+        });
+      }
+      if (areaSeriesRef.current) {
+        const isUp = (tickers[selectedAsset.symbol]?.change_percent ?? selectedAsset.changePct) >= 0;
+        areaSeriesRef.current.applyOptions({
+          visible: chartType === 'Line',
+          topColor: isUp ? 'rgba(0, 225, 99, 0.28)' : 'rgba(255, 92, 119, 0.28)',
+          bottomColor: 'rgba(0, 225, 99, 0.00)',
+          lineColor: isUp ? '#00E163' : '#FF5C77',
+        });
+      }
+    } catch (_) {}
+  }, [chartType, selectedAsset.symbol, selectedAsset.changePct, tickers]);
+
   // Live Micro-Tick Real-Time Engine with Continuous LocalStorage Persistence
   useEffect(() => {
-    const intervalSec = activeTimeframe === '1s' ? 1 : activeTimeframe === '1m' ? 60 : activeTimeframe === '5m' ? 300 : activeTimeframe === '15m' ? 900 : activeTimeframe === '1h' ? 3600 : activeTimeframe === '4h' ? 14400 : 86400;
-    const storageKey = `velocex_v3_candles_${selectedAsset.symbol}_${activeTimeframe}`;
+    const intervalSec = activeTimeframe === '1m' ? 60 : activeTimeframe === '5m' ? 300 : activeTimeframe === '15m' ? 900 : activeTimeframe === '1h' ? 3600 : activeTimeframe === '4h' ? 14400 : 86400;
+    const storageKey = `velocex_v5_candles_${selectedAsset.symbol}_${activeTimeframe}`;
 
     const interval = setInterval(() => {
-      if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
+      if (!candleSeriesRef.current || !volumeSeriesRef.current || !areaSeriesRef.current) return;
 
-      const spread = selectedAsset.price < 2 ? 0.0004 : selectedAsset.price < 100 ? 0.0008 : 0.0005;
-      const delta = (Math.random() - 0.495) * (selectedAsset.price * spread);
-      const newPrice = Number((selectedAsset.price + delta).toFixed(selectedAsset.decimals));
+      const currentTicker = tickers[selectedAsset.symbol];
+      const livePrice = currentTicker?.price ?? selectedAsset.price;
 
       const nowSec = Math.floor(Date.now() / 1000);
       const bucketTime = (Math.floor(nowSec / intervalSec) * intervalSec) as Time;
-      const wickSpread = selectedAsset.price * spread * 1.1;
 
       const candleList = currentCandlesRef.current.candles;
       const volumeList = currentCandlesRef.current.volume;
@@ -739,20 +766,21 @@ export const ProChartsView: React.FC = () => {
 
       if (currentBucketTime <= lastTime) {
         // Update existing candle bar in the same timeframe bucket
-        lastCandle.high = Math.max(lastCandle.high, newPrice, Number((newPrice + Math.random() * wickSpread).toFixed(selectedAsset.decimals)));
-        lastCandle.low = Math.min(lastCandle.low, newPrice, Number((newPrice - Math.random() * wickSpread).toFixed(selectedAsset.decimals)));
-        lastCandle.close = newPrice;
+        lastCandle.high = Math.max(lastCandle.high, livePrice);
+        lastCandle.low = Math.min(lastCandle.low, livePrice);
+        lastCandle.close = livePrice;
 
         candleSeriesRef.current.update(lastCandle);
+        areaSeriesRef.current.update({ time: lastCandle.time, value: livePrice });
       } else {
-        // Form a new candle period bar (strictly currentBucketTime > lastTime)
-        const prevClose = lastCandle ? lastCandle.close : selectedAsset.price;
+        // Form a new candle period bar
+        const prevClose = lastCandle ? lastCandle.close : livePrice;
         const newBar: CandlestickData<Time> = {
           time: bucketTime,
           open: prevClose,
-          high: Math.max(prevClose, newPrice, Number((newPrice + Math.random() * wickSpread).toFixed(selectedAsset.decimals))),
-          low: Math.min(prevClose, newPrice, Number((newPrice - Math.random() * wickSpread).toFixed(selectedAsset.decimals))),
-          close: newPrice,
+          high: Math.max(prevClose, livePrice),
+          low: Math.min(prevClose, livePrice),
+          close: livePrice,
         };
         candleList.push(newBar);
         if (candleList.length > 250) candleList.shift();
@@ -760,23 +788,23 @@ export const ProChartsView: React.FC = () => {
         const newVol: HistogramData<Time> = {
           time: bucketTime,
           value: Math.floor(60 + Math.random() * 200),
-          color: newPrice >= prevClose ? 'rgba(0, 225, 99, 0.4)' : 'rgba(255, 92, 119, 0.4)',
+          color: livePrice >= prevClose ? 'rgba(0, 225, 99, 0.4)' : 'rgba(255, 92, 119, 0.4)',
         };
         volumeList.push(newVol);
         if (volumeList.length > 250) volumeList.shift();
 
         candleSeriesRef.current.update(newBar);
+        areaSeriesRef.current.update({ time: bucketTime, value: livePrice });
         volumeSeriesRef.current.update(newVol);
       }
 
-      // Persist live candles directly to localStorage so refreshing NEVER loses data!
       try {
         localStorage.setItem(storageKey, JSON.stringify({ candles: candleList, volume: volumeList }));
       } catch (_) {}
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [selectedAsset, activeTimeframe]);
+  }, [selectedAsset, activeTimeframe, tickers]);
 
   // Fast Order Handler
   const handleFastOrder = (side: 'BUY' | 'SELL') => {
@@ -1195,21 +1223,60 @@ export const ProChartsView: React.FC = () => {
             )}
           </div>
 
-          {/* Timeframe Chips */}
-          <div className="flex items-center p-0.5 rounded-xl bg-[#26252E] border border-white/5 text-xs font-bold">
-            {(['1s', '1m', '5m', '15m', '1h', '4h', '1D', '1W'] as const).map((tf) => (
+            {/* OANDA Feed Badge Indicator */}
+            <span className="hidden sm:flex text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[#26252E] text-slate-300 border border-white/10 font-mono tracking-wider items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00E163] animate-pulse" />
+              OANDA Feed
+            </span>
+
+            {/* Candle vs Line Toggle Pill */}
+            <div className="flex items-center p-1 rounded-2xl bg-[#26252E] border border-white/5 text-xs font-semibold gap-1">
               <button
-                key={tf}
                 type="button"
-                onClick={() => setActiveTimeframe(tf)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                  activeTimeframe === tf ? 'bg-[#00E163] text-black font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
+                onClick={() => setChartType('Candle')}
+                className={`group relative px-3 py-1 rounded-xl overflow-hidden text-xs font-bold transition-colors duration-1000 cursor-pointer ${
+                  chartType === 'Candle'
+                    ? 'bg-[#00E163] text-black font-bold shadow-[0_0_12px_rgba(0,225,99,0.35)]'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
-                {tf}
+                {chartType !== 'Candle' && (
+                  <span className="absolute inset-0 bg-[#00E163] -translate-x-[105%] opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] pointer-events-none" />
+                )}
+                <span className="relative z-10 transition-colors duration-1000">Candle</span>
               </button>
-            ))}
-          </div>
+
+              <button
+                type="button"
+                onClick={() => setChartType('Line')}
+                className={`group relative px-3 py-1 rounded-xl overflow-hidden text-xs font-bold transition-colors duration-1000 cursor-pointer ${
+                  chartType === 'Line'
+                    ? 'bg-[#00E163] text-black font-bold shadow-[0_0_12px_rgba(0,225,99,0.35)]'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {chartType !== 'Line' && (
+                  <span className="absolute inset-0 bg-[#00E163] -translate-x-[105%] opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] pointer-events-none" />
+                )}
+                <span className="relative z-10 transition-colors duration-1000">Line</span>
+              </button>
+            </div>
+
+            {/* Timeframe Chips */}
+            <div className="flex items-center p-0.5 rounded-xl bg-[#26252E] border border-white/5 text-xs font-bold">
+              {(['1m', '5m', '15m', '1h', '4h', '1D'] as const).map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  onClick={() => setActiveTimeframe(tf)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    activeTimeframe === tf ? 'bg-[#00E163] text-black font-extrabold shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
 
           <div className="w-[1px] h-5 bg-white/10 my-auto" />
 

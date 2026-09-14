@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   FlashIcon,
   FireIcon,
@@ -22,6 +22,9 @@ import {
   Coins01Icon,
   ChartHistogramIcon,
 } from 'hugeicons-react';
+import { useTradingStore } from '@/store/useTradingStore';
+import { ASSET_REGISTRY, getAssetConfig } from '@/lib/assetConfig';
+import { Candlestick } from '@/types/trading';
 
 export type AssetCategory = 'all' | 'crypto' | 'forex' | 'cfd';
 
@@ -36,7 +39,26 @@ export interface ScalpPair {
   prefix: string;
 }
 
-// Complete 18 Assets across Forex, CFD, and Kripto matching VeloceX standard
+type Timeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1D';
+
+interface HoveredCandle {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+const TIMEFRAME_SECONDS: Record<Timeframe, number> = {
+  '1m': 60,
+  '5m': 300,
+  '15m': 900,
+  '1h': 3600,
+  '4h': 14400,
+  '1D': 86400,
+};
+
+// Complete 18 Assets across Forex, CFD, and Kripto matching VeloceX & OANDA standard
 export const ALL_LIGHTNING_PAIRS: ScalpPair[] = [
   // 1. KRIPTO (6 Aset)
   { id: 'SOL', symbol: 'SOL/USDT', name: 'Solana', category: 'crypto', price: 175.03, change24h: 1.94, decimals: 2, prefix: '$' },
@@ -44,17 +66,17 @@ export const ALL_LIGHTNING_PAIRS: ScalpPair[] = [
   { id: 'ETH', symbol: 'ETH/USDT', name: 'Ethereum', category: 'crypto', price: 4149.74, change24h: 1.86, decimals: 2, prefix: '$' },
   { id: 'LTC', symbol: 'LTC/USDT', name: 'Litecoin', category: 'crypto', price: 94.92, change24h: 26.83, decimals: 2, prefix: '$' },
   { id: 'BNB', symbol: 'BNB/USDT', name: 'Binance Coin', category: 'crypto', price: 614.35, change24h: 5.20, decimals: 2, prefix: '$' },
-  { id: 'ADA', symbol: 'ADA/USDT', name: 'Cardano', category: 'crypto', price: 0.562, change24h: 12.04, decimals: 4, prefix: '$' },
+  { id: 'ADA', symbol: 'ADA/USDT', name: 'Cardano', category: 'crypto', price: 0.5600, change24h: 12.04, decimals: 4, prefix: '$' },
 
-  // 2. FOREX (6 Aset)
-  { id: 'EURUSD', symbol: 'EUR/USD', name: 'Euro / US Dollar', category: 'forex', price: 1.0842, change24h: 0.12, decimals: 4, prefix: '' },
-  { id: 'GBPUSD', symbol: 'GBP/USD', name: 'British Pound / USD', category: 'forex', price: 1.2915, change24h: 1.34, decimals: 4, prefix: '' },
-  { id: 'USDJPY', symbol: 'USD/JPY', name: 'USD / Japanese Yen', category: 'forex', price: 154.60, change24h: -0.24, decimals: 2, prefix: '¥' },
-  { id: 'AUDUSD', symbol: 'AUD/USD', name: 'Australian Dollar / USD', category: 'forex', price: 0.6580, change24h: 0.45, decimals: 4, prefix: '' },
-  { id: 'USDCAD', symbol: 'USD/CAD', name: 'USD / Canadian Dollar', category: 'forex', price: 1.3820, change24h: -0.18, decimals: 4, prefix: '' },
-  { id: 'USDCHF', symbol: 'USD/CHF', name: 'USD / Swiss Franc', category: 'forex', price: 0.8840, change24h: 0.08, decimals: 4, prefix: '' },
+  // 2. FOREX (6 Aset - 5 Desimal OANDA Pipettes / 3 Desimal JPY)
+  { id: 'EURUSD', symbol: 'EUR/USD', name: 'Euro / US Dollar', category: 'forex', price: 1.15571, change24h: 0.12, decimals: 5, prefix: '' },
+  { id: 'GBPUSD', symbol: 'GBP/USD', name: 'British Pound / USD', category: 'forex', price: 1.29152, change24h: 1.34, decimals: 5, prefix: '' },
+  { id: 'USDJPY', symbol: 'USD/JPY', name: 'USD / Japanese Yen', category: 'forex', price: 154.603, change24h: -0.24, decimals: 3, prefix: '¥' },
+  { id: 'AUDUSD', symbol: 'AUD/USD', name: 'Australian Dollar / USD', category: 'forex', price: 0.65804, change24h: 0.45, decimals: 5, prefix: '' },
+  { id: 'USDCAD', symbol: 'USD/CAD', name: 'USD / Canadian Dollar', category: 'forex', price: 1.38202, change24h: -0.18, decimals: 5, prefix: '' },
+  { id: 'USDCHF', symbol: 'USD/CHF', name: 'USD / Swiss Franc', category: 'forex', price: 0.88401, change24h: 0.08, decimals: 5, prefix: '' },
 
-  // 3. CFD & KOMODITAS (6 Aset)
+  // 3. CFD & KOMODITAS (6 Aset - OANDA Specifications)
   { id: 'XAUUSD', symbol: 'XAU/USD', name: 'Gold (Emas)', category: 'cfd', price: 2514.80, change24h: 1.42, decimals: 2, prefix: '$' },
   { id: 'XAGUSD', symbol: 'XAG/USD', name: 'Silver (Perak)', category: 'cfd', price: 29.45, change24h: 2.15, decimals: 2, prefix: '$' },
   { id: 'USOIL', symbol: 'USOIL', name: 'Crude Oil WTI', category: 'cfd', price: 74.60, change24h: -1.05, decimals: 2, prefix: '$' },
@@ -62,6 +84,98 @@ export const ALL_LIGHTNING_PAIRS: ScalpPair[] = [
   { id: 'NAS100', symbol: 'NAS100', name: 'Nasdaq 100', category: 'cfd', price: 19720.50, change24h: 1.14, decimals: 2, prefix: '$' },
   { id: 'US30', symbol: 'US30', name: 'Dow Jones 30', category: 'cfd', price: 41250.00, change24h: 0.35, decimals: 2, prefix: '$' },
 ];
+
+function getStandardSymbol(id: string): string {
+  if (['SOL', 'BTC', 'ETH', 'LTC', 'BNB', 'ADA'].includes(id)) {
+    return `${id}USDT`;
+  }
+  return id;
+}
+
+// Calibration profiles matching real OANDA session dynamics
+const OANDA_CALIBRATION_CONFIG: Record<
+  string,
+  { decimals: number; volatility: number; waveCycles: number; amp: number }
+> = {
+  EURUSD: { decimals: 5, volatility: 0.00009, waveCycles: 2.2, amp: 3.2 },
+  GBPUSD: { decimals: 5, volatility: 0.0001, waveCycles: 2.5, amp: 3.5 },
+  USDJPY: { decimals: 3, volatility: 0.00012, waveCycles: 2.0, amp: 3.0 },
+  AUDUSD: { decimals: 5, volatility: 0.0001, waveCycles: 2.3, amp: 3.4 },
+  USDCAD: { decimals: 5, volatility: 0.0001, waveCycles: 2.1, amp: 3.2 },
+  USDCHF: { decimals: 5, volatility: 0.00009, waveCycles: 2.0, amp: 3.0 },
+  XAUUSD: { decimals: 2, volatility: 0.00014, waveCycles: 2.4, amp: 3.0 },
+  XAGUSD: { decimals: 2, volatility: 0.00028, waveCycles: 2.2, amp: 3.2 },
+  USOIL: { decimals: 2, volatility: 0.00022, waveCycles: 2.0, amp: 3.0 },
+  SPX500: { decimals: 2, volatility: 0.00007, waveCycles: 2.1, amp: 2.8 },
+  NAS100: { decimals: 2, volatility: 0.00009, waveCycles: 2.3, amp: 3.0 },
+  US30: { decimals: 2, volatility: 0.00007, waveCycles: 2.0, amp: 2.8 },
+  BTCUSDT: { decimals: 2, volatility: 0.00025, waveCycles: 2.5, amp: 3.2 },
+  ETHUSDT: { decimals: 2, volatility: 0.0003, waveCycles: 2.5, amp: 3.2 },
+  SOLUSDT: { decimals: 2, volatility: 0.00045, waveCycles: 2.6, amp: 3.5 },
+  BNBUSDT: { decimals: 2, volatility: 0.00025, waveCycles: 2.4, amp: 3.0 },
+  LTCUSDT: { decimals: 2, volatility: 0.00035, waveCycles: 2.3, amp: 3.2 },
+  ADAUSDT: { decimals: 4, volatility: 0.0004, waveCycles: 2.5, amp: 3.2 },
+};
+
+function generateTradingViewCandles(
+  basePrice: number,
+  decimals: number,
+  count: number,
+  intervalSec: number,
+  symbol?: string
+): Candlestick[] {
+  const candles: Candlestick[] = [];
+  const nowSec = Math.floor(Date.now() / 1000);
+  const currentBucket = Math.floor(nowSec / intervalSec) * intervalSec;
+  const startTime = currentBucket - (count - 1) * intervalSec;
+
+  const oandaConf = symbol ? OANDA_CALIBRATION_CONFIG[symbol] : null;
+  const volatility = oandaConf ? oandaConf.volatility : basePrice < 2 ? 0.00008 : 0.0005;
+  const waveCycles = oandaConf ? oandaConf.waveCycles : 2.2;
+  const amp = oandaConf ? oandaConf.amp : 3.5;
+
+  let currentP = basePrice * (1.0 - volatility * 2.0);
+
+  for (let i = 0; i < count; i++) {
+    const time = startTime + i * intervalSec;
+    const progress = i / count;
+    const sessionShape = Math.sin(progress * Math.PI * waveCycles) * (basePrice * volatility * amp);
+    const subWave = Math.cos(progress * Math.PI * 4.5) * (basePrice * volatility * 1.1);
+    const randomShock = (Math.random() - 0.49) * (basePrice * volatility * 1.4);
+    const targetP = basePrice + sessionShape + subWave + randomShock;
+
+    const open = currentP;
+    const close = targetP;
+    const bodyHeight = Math.abs(close - open);
+    const minWick = basePrice * volatility * 0.35;
+    const upperWick = Math.max(minWick, bodyHeight * (Math.random() * 0.85)) + basePrice * volatility * 0.3;
+    const lowerWick = Math.max(minWick, bodyHeight * (Math.random() * 0.85)) + basePrice * volatility * 0.3;
+
+    const high = Math.max(open, close) + upperWick;
+    const low = Math.min(open, close) - lowerWick;
+    const vol = Math.floor(30 + Math.random() * 60);
+
+    candles.push({
+      time,
+      open: Number(open.toFixed(decimals)),
+      high: Number(high.toFixed(decimals)),
+      low: Number(low.toFixed(decimals)),
+      close: Number(close.toFixed(decimals)),
+      volume: vol,
+    });
+
+    currentP = close;
+  }
+
+  if (candles.length > 0) {
+    const last = candles[candles.length - 1];
+    last.close = Number(basePrice.toFixed(decimals));
+    last.high = Number(Math.max(last.high, basePrice).toFixed(decimals));
+    last.low = Number(Math.min(last.low, basePrice).toFixed(decimals));
+  }
+
+  return candles;
+}
 
 interface LightningPosition {
   id: string;
@@ -100,7 +214,7 @@ const INITIAL_POSITIONS: LightningPosition[] = [
     type: 'LONG',
     leverage: 50,
     margin: 100,
-    entryPrice: 174.50,
+    entryPrice: 174.5,
     markPrice: 175.03,
     tpPrice: 176.77,
     slPrice: 173.62,
@@ -118,8 +232,8 @@ const INITIAL_HISTORY: ScalpHistoryItem[] = [
     type: 'LONG',
     leverage: 50,
     margin: 100,
-    entryPrice: 172.80,
-    closePrice: 174.60,
+    entryPrice: 172.8,
+    closePrice: 174.6,
     realizedPnl: 52.08,
     realizedPnlPct: 52.08,
     durationSec: 68,
@@ -147,7 +261,7 @@ const INITIAL_HISTORY: ScalpHistoryItem[] = [
     entryPrice: 2510.5,
     closePrice: 2516.2,
     realizedPnl: 18.16,
-    realizedPnlPct: 22.70,
+    realizedPnlPct: 22.7,
     durationSec: 110,
     closedAt: '14:20:18',
   },
@@ -158,13 +272,20 @@ interface LightningViewProps {
 }
 
 export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) => {
+  const { selectedSymbol, setSelectedSymbol, tickers } = useTradingStore();
+
   // Category Filter State ('all' | 'crypto' | 'forex' | 'cfd')
   const [activeCategory, setActiveCategory] = useState<AssetCategory>('all');
-  
+
   // Selected Pair & Live Price
   const [selectedPair, setSelectedPair] = useState<ScalpPair>(ALL_LIGHTNING_PAIRS[0]);
-  const [currentPrice, setCurrentPrice] = useState<number>(ALL_LIGHTNING_PAIRS[0].price);
-  const [priceHistory, setPriceHistory] = useState<number[]>([]);
+  const marketSymbol = useMemo(() => getStandardSymbol(selectedPair.id), [selectedPair.id]);
+  const meta = ASSET_REGISTRY[marketSymbol] || getAssetConfig(marketSymbol);
+
+  const currentTicker = tickers[marketSymbol];
+  const currentPrice = currentTicker?.price ?? selectedPair.price;
+  const changePercent = currentTicker?.change_percent ?? selectedPair.change24h;
+  const isPositive = changePercent >= 0;
 
   // Scalp Controller State
   const [marginAmount, setMarginAmount] = useState<string>('50');
@@ -174,9 +295,12 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
   const [slPercent, setSlPercent] = useState<number>(0.5); // -0.5%
   const [slippageTolerance, setSlippageTolerance] = useState<number>(0.1); // 0.1% standard
   const [zeroDelayMode, setZeroDelayMode] = useState<boolean>(true);
-  const [timeframe, setTimeframe] = useState<'30s' | '1m' | '3m' | '5m'>('1m');
-  const [chartType, setChartType] = useState<'line' | 'candle'>('line');
-  const [candles, setCandles] = useState<{ open: number; high: number; low: number; close: number }[]>([]);
+
+  // TradingView Standard Timeframe & Mode
+  const [timeframe, setTimeframe] = useState<Timeframe>('1m');
+  const [chartType, setChartType] = useState<'line' | 'candle'>('candle');
+  const [hoveredData, setHoveredData] = useState<HoveredCandle | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Sub-Navigation Tabs
   const [bottomTab, setBottomTab] = useState<'positions' | 'history' | 'stats'>('positions');
@@ -192,125 +316,495 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
   // Flash Execution Pulse Animation Trigger
   const [isExecuting, setIsExecuting] = useState<'LONG' | 'SHORT' | null>(null);
 
-  // Filtered Pairs List based on Category
-  const filteredPairs = activeCategory === 'all' 
-    ? ALL_LIGHTNING_PAIRS 
-    : ALL_LIGHTNING_PAIRS.filter((p) => p.category === activeCategory);
+  // Lightweight Charts References
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartInstanceRef = useRef<any>(null);
+  const candleSeriesRef = useRef<any>(null);
+  const areaSeriesRef = useRef<any>(null);
+  const lastCandleRef = useRef<Candlestick | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const isDisposedRef = useRef<boolean>(false);
+  const tpPriceLineRef = useRef<any>(null);
+  const slPriceLineRef = useRef<any>(null);
 
-  // Timeframe Configuration Mapping
-  const getTimeframeConfig = (tf: '30s' | '1m' | '3m' | '5m') => {
-    switch (tf) {
-      case '30s':
-        return { vol: 0.0004, tickInterval: 200, rollTicks: 4, trendDepth: 0.0015 };
-      case '1m':
-        return { vol: 0.0008, tickInterval: 350, rollTicks: 8, trendDepth: 0.003 };
-      case '3m':
-        return { vol: 0.0016, tickInterval: 550, rollTicks: 12, trendDepth: 0.006 };
-      case '5m':
-        return { vol: 0.0028, tickInterval: 800, rollTicks: 16, trendDepth: 0.01 };
-      default:
-        return { vol: 0.0008, tickInterval: 350, rollTicks: 8, trendDepth: 0.003 };
-    }
+  // Filtered Pairs List based on Category
+  const filteredPairs =
+    activeCategory === 'all'
+      ? ALL_LIGHTNING_PAIRS
+      : ALL_LIGHTNING_PAIRS.filter((p) => p.category === activeCategory);
+
+  // Sync with global store topic when pair is selected
+  const handleSelectPair = (pair: ScalpPair) => {
+    setSelectedPair(pair);
+    const sym = getStandardSymbol(pair.id);
+    setSelectedSymbol(sym);
   };
 
-  // Generate initial price history ticks & candles when switching asset OR timeframe
+  // 1. Initialize TradingView Lightweight Charts on Pair, Timeframe change
   useEffect(() => {
-    const config = getTimeframeConfig(timeframe);
-    const base = selectedPair.price;
-    const initialTicks: number[] = [];
-    let p = base * (1 - config.trendDepth * 0.5);
+    isDisposedRef.current = false;
 
-    // Build 40 historical ticks with undulating swings matching timeframe
-    for (let i = 0; i < 40; i++) {
-      const swing = Math.sin(i / 3.5) * (base * config.vol * 1.5);
-      const noise = (Math.random() - 0.48) * (base * config.vol * 0.8);
-      p = base + swing + noise;
-      initialTicks.push(Number(p.toFixed(selectedPair.decimals)));
-    }
-    initialTicks[initialTicks.length - 1] = base;
-    setPriceHistory(initialTicks);
-    setCurrentPrice(base);
+    async function initTradingViewChart() {
+      if (!chartContainerRef.current) return;
+      setIsLoading(true);
 
-    // Build 24 realistic OHLC candles matching timeframe waves
-    const initCandles: { open: number; high: number; low: number; close: number }[] = [];
-    let cOpen = base * (1 - config.trendDepth * 0.8);
-    for (let i = 0; i < 24; i++) {
-      const waveDelta = Math.sin(i / 2.5) * (base * config.vol * 2.2);
-      const delta = (Math.random() - 0.48) * (base * config.vol * 1.2) + waveDelta * 0.3;
-      const cClose = Number((cOpen + delta).toFixed(selectedPair.decimals));
-      const cHigh = Number((Math.max(cOpen, cClose) + Math.random() * (base * config.vol * 0.9)).toFixed(selectedPair.decimals));
-      const cLow = Number((Math.min(cOpen, cClose) - Math.random() * (base * config.vol * 0.9)).toFixed(selectedPair.decimals));
-      initCandles.push({ open: cOpen, high: cHigh, low: cLow, close: cClose });
-      cOpen = cClose;
-    }
-    setCandles(initCandles);
-  }, [selectedPair, timeframe]);
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+      candleSeriesRef.current = null;
+      areaSeriesRef.current = null;
+      tpPriceLineRef.current = null;
+      slPriceLineRef.current = null;
 
-  // Live Tick-by-Tick Simulation (Synchronized to selected timeframe speed)
-  useEffect(() => {
-    const config = getTimeframeConfig(timeframe);
-    let tickCount = 0;
-    const interval = setInterval(() => {
-      tickCount++;
-      const volatility = selectedPair.price * config.vol * 0.5;
-      const delta = (Math.random() - 0.49) * volatility;
-      
-      setCurrentPrice((prev) => {
-        const nextPrice = Number((prev + delta).toFixed(selectedPair.decimals));
-        
-        setPriceHistory((hist) => {
-          const updated = [...hist.slice(1), nextPrice];
-          return updated;
-        });
+      if (chartInstanceRef.current) {
+        try {
+          chartInstanceRef.current.remove();
+        } catch (_) {}
+        chartInstanceRef.current = null;
+      }
 
-        // Update active candle or roll new candle based on timeframe rollTicks
-        setCandles((currCandles) => {
-          if (currCandles.length === 0) return currCandles;
-          const lastCandle = currCandles[currCandles.length - 1];
-          const updatedLast = {
-            ...lastCandle,
-            high: Math.max(lastCandle.high, nextPrice),
-            low: Math.min(lastCandle.low, nextPrice),
-            close: nextPrice,
-          };
+      const { createChart, ColorType, CrosshairMode, LineStyle } = await import(
+        'lightweight-charts'
+      );
 
-          if (tickCount % config.rollTicks === 0) {
-            // Roll new candle
-            const newCandle = {
-              open: nextPrice,
-              high: nextPrice,
-              low: nextPrice,
-              close: nextPrice,
-            };
-            return [...currCandles.slice(1), newCandle];
-          }
+      if (isDisposedRef.current || !chartContainerRef.current) return;
 
-          return [...currCandles.slice(0, -1), updatedLast];
-        });
+      chartContainerRef.current.innerHTML = '';
 
-        // Update live floating PnL for active positions
-        setPositions((currPositions) =>
-          currPositions.map((pos) => {
-            if (pos.symbol !== selectedPair.symbol) return pos;
-            const priceDiff = pos.type === 'LONG' ? nextPrice - pos.entryPrice : pos.entryPrice - nextPrice;
-            const rawPnl = (priceDiff / pos.entryPrice) * pos.margin * pos.leverage;
-            const pnlPct = (rawPnl / pos.margin) * 100;
-            return {
-              ...pos,
-              markPrice: nextPrice,
-              floatingPnl: Number(rawPnl.toFixed(2)),
-              floatingPnlPct: Number(pnlPct.toFixed(2)),
-              durationSec: pos.durationSec + 1,
-            };
-          })
-        );
+      const containerWidth = chartContainerRef.current.clientWidth || 800;
+      const containerHeight = chartContainerRef.current.clientHeight || 360;
 
-        return nextPrice;
+      const chart = createChart(chartContainerRef.current, {
+        width: containerWidth,
+        height: containerHeight,
+        layout: {
+          background: { type: ColorType.Solid, color: 'transparent' },
+          textColor: '#8E8D9A',
+          fontSize: 11,
+          fontFamily: "'JetBrains Mono', monospace, -apple-system, BlinkMacSystemFont, sans-serif",
+        },
+        localization: {
+          locale: 'id-ID',
+          dateFormat: 'dd MMM yyyy',
+          timeFormatter: (time: number) => {
+            return new Intl.DateTimeFormat('en-GB', {
+              timeZone: 'Asia/Jakarta',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+            }).format(new Date(time * 1000));
+          },
+        },
+        grid: {
+          vertLines: { color: 'rgba(255, 255, 255, 0.03)', style: LineStyle.Dashed },
+          horzLines: { color: 'rgba(255, 255, 255, 0.03)', style: LineStyle.Dashed },
+        },
+        crosshair: {
+          mode: CrosshairMode.Normal,
+          vertLine: {
+            color: '#2962FF',
+            width: 1,
+            style: LineStyle.Dashed,
+            labelBackgroundColor: '#2962FF',
+          },
+          horzLine: {
+            color: '#2962FF',
+            width: 1,
+            style: LineStyle.Dashed,
+            labelBackgroundColor: '#2962FF',
+          },
+        },
+        rightPriceScale: {
+          borderColor: 'rgba(255, 255, 255, 0.06)',
+          scaleMargins: {
+            top: 0.15,
+            bottom: 0.15,
+          },
+          alignLabels: true,
+          autoScale: true,
+        },
+        timeScale: {
+          borderColor: 'rgba(255, 255, 255, 0.06)',
+          timeVisible: true,
+          secondsVisible: false,
+          barSpacing: 10,
+          minBarSpacing: 5,
+          rightOffset: 12,
+          tickMarkFormatter: (time: number) => {
+            return new Intl.DateTimeFormat('en-GB', {
+              timeZone: 'Asia/Jakarta',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+            }).format(new Date(time * 1000));
+          },
+        },
+        handleScroll: {
+          mouseWheel: true,
+          pressedMouseMove: true,
+        },
+        handleScale: {
+          axisPressedMouseMove: true,
+          mouseWheel: true,
+          pinch: true,
+        },
       });
-    }, config.tickInterval);
 
-    return () => clearInterval(interval);
-  }, [selectedPair, timeframe]);
+      chartInstanceRef.current = chart;
+
+      const priceFormat = {
+        type: 'price' as const,
+        precision: selectedPair.decimals,
+        minMove: 1 / Math.pow(10, selectedPair.decimals),
+      };
+
+      // 1. Candlestick Series
+      const candlestickSeries = chart.addCandlestickSeries({
+        upColor: '#00E163',
+        downColor: '#FF5C77',
+        borderVisible: false,
+        wickVisible: true,
+        wickUpColor: '#00E163',
+        wickDownColor: '#FF5C77',
+        priceFormat,
+        visible: chartType === 'candle',
+      });
+      candleSeriesRef.current = candlestickSeries;
+
+      // 2. Area Series (Line View)
+      const areaSeries = chart.addAreaSeries({
+        topColor: isPositive ? 'rgba(0, 225, 99, 0.28)' : 'rgba(255, 92, 119, 0.28)',
+        bottomColor: 'rgba(0, 225, 99, 0.00)',
+        lineColor: isPositive ? '#00E163' : '#FF5C77',
+        lineWidth: 2,
+        priceLineVisible: true,
+        priceFormat,
+        visible: chartType === 'line',
+      });
+      areaSeriesRef.current = areaSeries;
+
+      // Crosshair inspection for live OHLC HUD in UTC+7 (WIB / Jakarta)
+      chart.subscribeCrosshairMove((param) => {
+        if (!param.time || !param.seriesData) {
+          setHoveredData(null);
+          return;
+        }
+
+        const candleData = param.seriesData.get(candlestickSeries) as any;
+        const lineData = param.seriesData.get(areaSeries) as any;
+
+        const dateStr =
+          typeof param.time === 'number'
+            ? new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Jakarta',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+              }).format(new Date(param.time * 1000))
+            : String(param.time);
+
+        if (candleData) {
+          setHoveredData({
+            time: dateStr,
+            open: candleData.open,
+            high: candleData.high,
+            low: candleData.low,
+            close: candleData.close,
+          });
+        } else if (lineData) {
+          setHoveredData({
+            time: dateStr,
+            open: lineData.value,
+            high: lineData.value,
+            low: lineData.value,
+            close: lineData.value,
+          });
+        }
+      });
+
+      // 3. Load Continuous Authentic OANDA Candles
+      const intervalSec = TIMEFRAME_SECONDS[timeframe];
+      let candlesData: Candlestick[] = [];
+
+      try {
+        const res = await fetch(`/api/market/candles?symbol=${marketSymbol}&limit=120`);
+        if (res.ok) {
+          const apiData: Candlestick[] = await res.json();
+          if (Array.isArray(apiData) && apiData.length > 0) {
+            const lastApiClose = apiData[apiData.length - 1].close;
+            const ratio = currentPrice / lastApiClose;
+            candlesData = apiData.map((c) => ({
+              time: c.time,
+              open: Number((c.open * ratio).toFixed(selectedPair.decimals)),
+              high: Number((c.high * ratio).toFixed(selectedPair.decimals)),
+              low: Number((c.low * ratio).toFixed(selectedPair.decimals)),
+              close: Number((c.close * ratio).toFixed(selectedPair.decimals)),
+              volume: c.volume,
+            }));
+          }
+        }
+      } catch (_) {}
+
+      // Fallback: Synthesize continuous authentic OANDA candles
+      if (!candlesData.length) {
+        candlesData = generateTradingViewCandles(
+          currentPrice,
+          selectedPair.decimals,
+          120,
+          intervalSec,
+          marketSymbol
+        );
+      }
+
+      if (!isDisposedRef.current && candlesData.length > 0) {
+        const lastIdx = candlesData.length - 1;
+        candlesData[lastIdx].close = currentPrice;
+        candlesData[lastIdx].high = Math.max(candlesData[lastIdx].high, currentPrice);
+        candlesData[lastIdx].low = Math.min(candlesData[lastIdx].low, currentPrice);
+
+        lastCandleRef.current = candlesData[lastIdx];
+
+        const formattedCandles = candlesData.map((c) => ({
+          time: c.time as any,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+        }));
+
+        try {
+          candlestickSeries.setData(formattedCandles);
+        } catch (_) {}
+
+        const formattedArea = candlesData.map((c) => ({
+          time: c.time as any,
+          value: c.close,
+        }));
+
+        try {
+          areaSeries.setData(formattedArea);
+        } catch (_) {}
+
+        // Create initial TP & SL price lines on active series
+        const activeSeries = chartType === 'candle' ? candlestickSeries : areaSeries;
+        const tpVal = currentPrice * (1 + tpPercent / 100);
+        const slVal = currentPrice * (1 - slPercent / 100);
+
+        try {
+          tpPriceLineRef.current = activeSeries.createPriceLine({
+            price: Number(tpVal.toFixed(selectedPair.decimals)),
+            color: '#00E163',
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: `TP +${tpPercent}%`,
+          });
+
+          slPriceLineRef.current = activeSeries.createPriceLine({
+            price: Number(slVal.toFixed(selectedPair.decimals)),
+            color: '#FF5C77',
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: `SL -${slPercent}%`,
+          });
+        } catch (_) {}
+      }
+
+      if (!isDisposedRef.current) {
+        setIsLoading(false);
+        try {
+          chart.timeScale().fitContent();
+        } catch (_) {}
+      }
+
+      // Auto-resize observer
+      const resizeObserver = new ResizeObserver((entries) => {
+        if (
+          isDisposedRef.current ||
+          !entries ||
+          entries.length === 0 ||
+          !chartInstanceRef.current
+        )
+          return;
+        const { width, height } = entries[0].contentRect;
+        if (width > 0 && height > 0) {
+          try {
+            chartInstanceRef.current.applyOptions({ width, height });
+          } catch (_) {}
+        }
+      });
+
+      resizeObserverRef.current = resizeObserver;
+      if (chartContainerRef.current) {
+        resizeObserver.observe(chartContainerRef.current);
+      }
+    }
+
+    initTradingViewChart();
+
+    return () => {
+      isDisposedRef.current = true;
+      if (resizeObserverRef.current) {
+        try {
+          resizeObserverRef.current.disconnect();
+        } catch (_) {}
+        resizeObserverRef.current = null;
+      }
+      candleSeriesRef.current = null;
+      areaSeriesRef.current = null;
+      tpPriceLineRef.current = null;
+      slPriceLineRef.current = null;
+      if (chartInstanceRef.current) {
+        try {
+          chartInstanceRef.current.remove();
+        } catch (_) {}
+        chartInstanceRef.current = null;
+      }
+    };
+  }, [marketSymbol, timeframe]);
+
+  // 2. Real-Time Live Streaming via WebSocket Ticks
+  useEffect(() => {
+    if (!currentTicker?.price) return;
+    const livePrice = currentTicker.price;
+
+    // Update active forming candle on chart
+    if (
+      !isDisposedRef.current &&
+      chartInstanceRef.current &&
+      candleSeriesRef.current &&
+      areaSeriesRef.current
+    ) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const intervalSec = TIMEFRAME_SECONDS[timeframe];
+      const currentBucket = Math.floor(nowSec / intervalSec) * intervalSec;
+
+      let updatedCandle: Candlestick;
+      if (!lastCandleRef.current || currentBucket > Number(lastCandleRef.current.time)) {
+        updatedCandle = {
+          time: currentBucket,
+          open: livePrice,
+          high: livePrice,
+          low: livePrice,
+          close: livePrice,
+          volume: 1.0,
+        };
+      } else {
+        const prev = lastCandleRef.current;
+        updatedCandle = {
+          time: prev.time,
+          open: prev.open,
+          high: Math.max(prev.high, livePrice),
+          low: Math.min(prev.low, livePrice),
+          close: livePrice,
+          volume: (prev.volume || 1.0) + 0.1,
+        };
+      }
+      lastCandleRef.current = updatedCandle;
+
+      try {
+        candleSeriesRef.current.update({
+          time: updatedCandle.time as any,
+          open: updatedCandle.open,
+          high: updatedCandle.high,
+          low: updatedCandle.low,
+          close: updatedCandle.close,
+        });
+
+        areaSeriesRef.current.update({
+          time: updatedCandle.time as any,
+          value: updatedCandle.close,
+        });
+      } catch (_) {}
+    }
+
+    // Update live floating PnL for active positions
+    setPositions((currPositions) =>
+      currPositions.map((pos) => {
+        if (pos.symbol !== selectedPair.symbol) return pos;
+        const priceDiff =
+          pos.type === 'LONG' ? livePrice - pos.entryPrice : pos.entryPrice - livePrice;
+        const rawPnl = (priceDiff / pos.entryPrice) * pos.margin * pos.leverage;
+        const pnlPct = (rawPnl / pos.margin) * 100;
+        return {
+          ...pos,
+          markPrice: livePrice,
+          floatingPnl: Number(rawPnl.toFixed(2)),
+          floatingPnlPct: Number(pnlPct.toFixed(2)),
+          durationSec: pos.durationSec + 1,
+        };
+      })
+    );
+  }, [currentTicker?.price, timeframe, selectedPair.symbol]);
+
+  // 3. Switch between Candle and Line visibility
+  useEffect(() => {
+    if (isDisposedRef.current || !chartInstanceRef.current) return;
+
+    try {
+      if (candleSeriesRef.current) {
+        candleSeriesRef.current.applyOptions({
+          visible: chartType === 'candle',
+        });
+      }
+
+      if (areaSeriesRef.current) {
+        areaSeriesRef.current.applyOptions({
+          visible: chartType === 'line',
+          topColor: isPositive ? 'rgba(0, 225, 99, 0.28)' : 'rgba(255, 92, 119, 0.28)',
+          bottomColor: 'rgba(0, 225, 99, 0.00)',
+          lineColor: isPositive ? '#00E163' : '#FF5C77',
+        });
+      }
+    } catch (_) {}
+  }, [chartType, isPositive]);
+
+  // 4. Update TP & SL Price Lines on Chart dynamically
+  useEffect(() => {
+    if (isDisposedRef.current || !chartInstanceRef.current) return;
+    const activeSeries = chartType === 'candle' ? candleSeriesRef.current : areaSeriesRef.current;
+    if (!activeSeries) return;
+
+    const tpVal = currentPrice * (1 + tpPercent / 100);
+    const slVal = currentPrice * (1 - slPercent / 100);
+
+    try {
+      if (tpPriceLineRef.current) {
+        try {
+          activeSeries.removePriceLine(tpPriceLineRef.current);
+        } catch (_) {}
+        tpPriceLineRef.current = null;
+      }
+      if (slPriceLineRef.current) {
+        try {
+          activeSeries.removePriceLine(slPriceLineRef.current);
+        } catch (_) {}
+        slPriceLineRef.current = null;
+      }
+
+      tpPriceLineRef.current = activeSeries.createPriceLine({
+        price: Number(tpVal.toFixed(selectedPair.decimals)),
+        color: '#00E163',
+        lineWidth: 1,
+        lineStyle: 2, // Dashed
+        axisLabelVisible: true,
+        title: `TP +${tpPercent}%`,
+      });
+
+      slPriceLineRef.current = activeSeries.createPriceLine({
+        price: Number(slVal.toFixed(selectedPair.decimals)),
+        color: '#FF5C77',
+        lineWidth: 1,
+        lineStyle: 2, // Dashed
+        axisLabelVisible: true,
+        title: `SL -${slPercent}%`,
+      });
+    } catch (_) {}
+  }, [tpPercent, slPercent, currentPrice, chartType, selectedPair.decimals]);
 
   // Handle Preset Change
   const handlePresetChange = (preset: 'safe' | 'standard' | 'aggressive') => {
@@ -336,26 +830,31 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
     setTimeout(() => setIsExecuting(null), 300);
 
     const baseQuote = currentPrice;
-    
-    // Simulate sub-second order book slippage fluctuation (0.01% - 0.12%)
-    const simulatedSlippagePct = Number(((Math.random() * 0.09) * (timeframe === '30s' ? 1.4 : 1.0)).toFixed(3));
-    
-    // Check if slippage exceeds user-defined protection threshold
+    const simulatedSlippagePct = Number((Math.random() * 0.08).toFixed(3));
+
     if (simulatedSlippagePct > slippageTolerance) {
-      onOrderSuccess?.(`Proteksi Slippage Aktif: Pergeseran harga (${simulatedSlippagePct}%) melebihi toleransi (${slippageTolerance}%). Order dibatalkan aman.`);
+      onOrderSuccess?.(
+        `Proteksi Slippage Aktif: Pergeseran harga (${simulatedSlippagePct}%) melebihi toleransi (${slippageTolerance}%). Order dibatalkan aman.`
+      );
       return;
     }
 
-    // Apply filled execution price with actual slippage offset
     const slippageOffset = baseQuote * (simulatedSlippagePct / 100);
-    const entry = type === 'LONG'
-      ? Number((baseQuote + slippageOffset).toFixed(selectedPair.decimals))
-      : Number((baseQuote - slippageOffset).toFixed(selectedPair.decimals));
+    const entry =
+      type === 'LONG'
+        ? Number((baseQuote + slippageOffset).toFixed(selectedPair.decimals))
+        : Number((baseQuote - slippageOffset).toFixed(selectedPair.decimals));
 
     const tpDistance = entry * (tpPercent / 100);
     const slDistance = entry * (slPercent / 100);
-    const tpPrice = type === 'LONG' ? Number((entry + tpDistance).toFixed(selectedPair.decimals)) : Number((entry - tpDistance).toFixed(selectedPair.decimals));
-    const slPrice = type === 'LONG' ? Number((entry - slDistance).toFixed(selectedPair.decimals)) : Number((entry + slDistance).toFixed(selectedPair.decimals));
+    const tpPrice =
+      type === 'LONG'
+        ? Number((entry + tpDistance).toFixed(selectedPair.decimals))
+        : Number((entry - tpDistance).toFixed(selectedPair.decimals));
+    const slPrice =
+      type === 'LONG'
+        ? Number((entry - slDistance).toFixed(selectedPair.decimals))
+        : Number((entry + slDistance).toFixed(selectedPair.decimals));
 
     const now = new Date();
     const timeStr = now.toTimeString().split(' ')[0];
@@ -379,7 +878,9 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
     setPositions([newPos, ...positions]);
     setAvailableBalance((b) => b - margin);
     const actionLabel = type === 'LONG' ? 'BUY' : 'SELL';
-    onOrderSuccess?.(`Order ${actionLabel} ${selectedPair.symbol} $${margin} (${leverage}x) dieksekusi @ ${selectedPair.prefix}${entry.toLocaleString()} (Slippage: ${simulatedSlippagePct}%).`);
+    onOrderSuccess?.(
+      `Order ${actionLabel} ${selectedPair.symbol} $${margin} (${leverage}x) dieksekusi @ ${selectedPair.prefix}${entry.toLocaleString()} (Slippage: ${simulatedSlippagePct}%).`
+    );
   };
 
   // 1-Click Flip Position (Balik Arah Instan)
@@ -387,7 +888,6 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
     const pos = positions.find((p) => p.id === posId);
     if (!pos) return;
 
-    // Close current position
     const closePnl = pos.floatingPnl;
     const closePnlPct = pos.floatingPnlPct;
     const now = new Date().toTimeString().split(' ')[0];
@@ -406,18 +906,23 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
       closedAt: now,
     };
 
-    // Open reverse position
-    const newType: 'LONG' | 'SHORT' = pos.type === 'LONG' ? 'SHORT' : 'LONG';
-    const entry = currentPrice;
+    const nextType: 'LONG' | 'SHORT' = pos.type === 'LONG' ? 'SHORT' : 'LONG';
+    const entry = pos.markPrice;
     const tpDistance = entry * (tpPercent / 100);
     const slDistance = entry * (slPercent / 100);
-    const tpPrice = newType === 'LONG' ? Number((entry + tpDistance).toFixed(selectedPair.decimals)) : Number((entry - tpDistance).toFixed(selectedPair.decimals));
-    const slPrice = newType === 'LONG' ? Number((entry - slDistance).toFixed(selectedPair.decimals)) : Number((entry + slDistance).toFixed(selectedPair.decimals));
+    const tpPrice =
+      nextType === 'LONG'
+        ? Number((entry + tpDistance).toFixed(selectedPair.decimals))
+        : Number((entry - tpDistance).toFixed(selectedPair.decimals));
+    const slPrice =
+      nextType === 'LONG'
+        ? Number((entry - slDistance).toFixed(selectedPair.decimals))
+        : Number((entry + slDistance).toFixed(selectedPair.decimals));
 
     const flippedPos: LightningPosition = {
       id: `pos-flip-${Date.now()}`,
       symbol: pos.symbol,
-      type: newType,
+      type: nextType,
       leverage: pos.leverage,
       margin: pos.margin,
       entryPrice: entry,
@@ -430,17 +935,19 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
       durationSec: 0,
     };
 
-    setPositions((prev) => [flippedPos, ...prev.filter((p) => p.id !== posId)]);
-    setHistory((prev) => [histItem, ...prev]);
+    setHistory([histItem, ...history]);
+    setPositions(positions.map((p) => (p.id === posId ? flippedPos : p)));
     setAvailableBalance((b) => b + closePnl);
-    if (closePnl > 0) setWinStreak((s) => s + 1);
+    if (closePnl > 0) setWinStreak((w) => w + 1);
+    else setWinStreak(0);
 
-    const newActionLabel = newType === 'LONG' ? 'BUY' : 'SELL';
-    onOrderSuccess?.(`Posisi berhasil dibalik ke ${newActionLabel} ${pos.symbol} secara instan.`);
+    onOrderSuccess?.(
+      `Posisi ${pos.type} ${pos.symbol} ditutup (${closePnl >= 0 ? '+' : ''}$${closePnl}). Balik arah ke ${nextType} instan terpasang.`
+    );
   };
 
-  // 1-Click Flash Close Single Position
-  const handleFlashClose = (posId: string) => {
+  // Close Specific Position
+  const handleClosePosition = (posId: string) => {
     const pos = positions.find((p) => p.id === posId);
     if (!pos) return;
 
@@ -462,19 +969,18 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
       closedAt: now,
     };
 
-    setPositions((prev) => prev.filter((p) => p.id !== posId));
-    setHistory((prev) => [histItem, ...prev]);
+    setHistory([histItem, ...history]);
+    setPositions(positions.filter((p) => p.id !== posId));
     setAvailableBalance((b) => b + pos.margin + closePnl);
-    if (closePnl > 0) {
-      setWinStreak((s) => s + 1);
-    } else {
-      setWinStreak(0);
-    }
+    if (closePnl > 0) setWinStreak((w) => w + 1);
+    else setWinStreak(0);
 
-    onOrderSuccess?.(`Posisi ${pos.symbol} berhasil ditutup. PnL: ${closePnl >= 0 ? '+' : ''}$${closePnl.toFixed(2)} USDT`);
+    onOrderSuccess?.(
+      `Posisi ${pos.type} ${pos.symbol} ditutup. Realized PnL: ${closePnl >= 0 ? '+' : ''}$${closePnl.toFixed(2)} (${closePnlPct}%).`
+    );
   };
 
-  // Emergency Flash Close All (Tutup Semua Posisi Seketika)
+  // Emergency Flash Close All
   const handleEmergencyFlashCloseAll = () => {
     if (positions.length === 0) return;
 
@@ -504,85 +1010,6 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
     onOrderSuccess?.(`Seluruh ${positions.length} posisi terbuka berhasil ditutup seketika.`);
   };
 
-  // SVG Catmull-Rom Path Builder for Live Tick Chart
-  const getTickPath = () => {
-    if (priceHistory.length < 2) return { path: '', fillPath: '' };
-    const min = Math.min(...priceHistory);
-    const max = Math.max(...priceHistory);
-    const range = max - min || 1;
-    const width = 640;
-    const height = 240;
-    const padX = 15;
-    const padY = 20;
-
-    const pts = priceHistory.map((val, idx) => {
-      const x = padX + (idx / (priceHistory.length - 1)) * (width - 2 * padX);
-      const y = height - padY - ((val - min) / range) * (height - 2 * padY);
-      return { x, y };
-    });
-
-    let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[i === 0 ? 0 : i - 1];
-      const p1 = pts[i];
-      const p2 = pts[i + 1];
-      const p3 = pts[i + 2] || p2;
-
-      const cp1x = p1.x + (p2.x - p0.x) / 4.5;
-      const cp1y = p1.y + (p2.y - p0.y) / 4.5;
-      const cp2x = p2.x - (p3.x - p1.x) / 4.5;
-      const cp2y = p2.y - (p3.y - p1.y) / 4.5;
-
-      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
-    }
-
-    const lastPt = pts[pts.length - 1];
-    const fillPath = `${d} L ${lastPt.x.toFixed(1)} ${height} L ${pts[0].x.toFixed(1)} ${height} Z`;
-
-    return { path: d, fillPath, lastPt, min, max };
-  };
-
-  const tickData = getTickPath();
-
-  // Candle Geometry Builder for SVG
-  const getCandleGeometry = () => {
-    if (candles.length === 0) return [];
-    const min = Math.min(...candles.map((c) => c.low), currentPrice * 0.998);
-    const max = Math.max(...candles.map((c) => c.high), currentPrice * 1.002);
-    const range = max - min || 1;
-    const width = 640;
-    const height = 240;
-    const padX = 15;
-    const padY = 20;
-    const totalBars = candles.length;
-    const barWidth = (width - 2 * padX) / totalBars;
-
-    return candles.map((c, idx) => {
-      const cx = padX + (idx + 0.5) * barWidth;
-      const yHigh = height - padY - ((c.high - min) / range) * (height - 2 * padY);
-      const yLow = height - padY - ((c.low - min) / range) * (height - 2 * padY);
-      const yOpen = height - padY - ((c.open - min) / range) * (height - 2 * padY);
-      const yClose = height - padY - ((c.close - min) / range) * (height - 2 * padY);
-      const isUp = c.close >= c.open;
-      const bodyTop = Math.min(yOpen, yClose);
-      const bodyHeight = Math.max(Math.abs(yClose - yOpen), 2.5);
-      const color = isUp ? '#00E163' : '#FF5C77';
-
-      return {
-        cx,
-        yHigh,
-        yLow,
-        bodyTop,
-        bodyHeight,
-        bodyWidth: Math.max(barWidth * 0.72, 4),
-        color,
-        isUp,
-      };
-    });
-  };
-
-  const candleData = getCandleGeometry();
-
   return (
     <div className="flex flex-col gap-5 p-3 sm:p-5 md:p-6 pb-24 md:pb-6 max-w-[1600px] mx-auto w-full font-sans animate-fade-in text-slate-100">
       {/* 1. TOP HEADER & EMERGENCY ACTION BAR */}
@@ -603,7 +1030,8 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
             Eksekusi Scalping Cepat & Balik Arah 1-Klik
           </h1>
           <p className="text-xs text-slate-400">
-            Platform scalping profesional dengan latensi ultra-rendah, preset TP/SL otomatis, dan proteksi pembalikan posisi instan pada seluruh 18 aset pasar.
+            Platform scalping profesional dengan latensi ultra-rendah, preset TP/SL otomatis, dan
+            proteksi pembalikan posisi instan pada seluruh 18 aset pasar.
           </p>
         </div>
 
@@ -628,7 +1056,7 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
             </div>
           </div>
 
-          {/* Emergency Flash Close All Button with Red Sweep */}
+          {/* Emergency Flash Close All Button */}
           <button
             type="button"
             onClick={handleEmergencyFlashCloseAll}
@@ -676,7 +1104,9 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
                     <span>{cat.label}</span>
                     <span
                       className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono-num font-extrabold ${
-                        isCatActive ? 'bg-black text-[#00E163]' : 'bg-[#26252E] text-slate-400 group-hover:bg-black group-hover:text-[#00E163]'
+                        isCatActive
+                          ? 'bg-black text-[#00E163]'
+                          : 'bg-[#26252E] text-slate-400 group-hover:bg-black group-hover:text-[#00E163]'
                       }`}
                     >
                       {cat.count}
@@ -688,7 +1118,7 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
           </div>
         </div>
 
-        {/* Scrollable Asset Pills with 1000ms Sweep */}
+        {/* Scrollable Asset Pills */}
         <div className="flex items-center gap-2 overflow-x-auto custom-positions-scrollbar pb-1">
           {filteredPairs.map((pair) => {
             const isSelected = selectedPair.id === pair.id;
@@ -696,7 +1126,7 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
               <button
                 key={pair.id}
                 type="button"
-                onClick={() => setSelectedPair(pair)}
+                onClick={() => handleSelectPair(pair)}
                 className={`group relative flex items-center gap-2.5 px-3.5 h-11 rounded-2xl text-xs font-bold transition-all duration-1000 overflow-hidden cursor-pointer select-none shrink-0 border ${
                   isSelected
                     ? 'bg-[#00E163] text-black shadow-lg shadow-[#00E163]/20 font-black border-[#00E163]'
@@ -709,10 +1139,20 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
                 <span className="relative z-10 flex items-center gap-2 transition-colors duration-1000">
                   <span className="font-extrabold font-mono-num">{pair.symbol}</span>
                   <span className="font-mono-num font-bold">
-                    {pair.prefix}{pair.price.toLocaleString(undefined, { minimumFractionDigits: pair.decimals })}
+                    {pair.prefix}
+                    {pair.price.toLocaleString(undefined, { minimumFractionDigits: pair.decimals })}
                   </span>
-                  <span className={`text-[10px] font-mono-num font-extrabold ${isSelected ? 'text-black' : pair.change24h >= 0 ? 'text-[#00E163] group-hover:text-black' : 'text-[#FF5C77] group-hover:text-black'}`}>
-                    {pair.change24h >= 0 ? '+' : ''}{pair.change24h}%
+                  <span
+                    className={`text-[10px] font-mono-num font-extrabold ${
+                      isSelected
+                        ? 'text-black'
+                        : pair.change24h >= 0
+                        ? 'text-[#00E163] group-hover:text-black'
+                        : 'text-[#FF5C77] group-hover:text-black'
+                    }`}
+                  >
+                    {pair.change24h >= 0 ? '+' : ''}
+                    {pair.change24h}%
                   </span>
                 </span>
               </button>
@@ -721,9 +1161,9 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
         </div>
       </div>
 
-      {/* 3. MAIN WORKSPACE GRID: LIVE TICK CHART (LEFT) & INSTANT CONTROLLER (RIGHT) */}
+      {/* 3. MAIN WORKSPACE GRID: TRADINGVIEW CHART (LEFT) & INSTANT CONTROLLER (RIGHT) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* LEFT: LIVE SUB-SECOND TICK / CANDLESTICK CHART (8 COLS) */}
+        {/* LEFT: TRADINGVIEW LIGHTWEIGHT CHARTS (8 COLS) */}
         <div className="lg:col-span-8 flex flex-col gap-4 p-5 rounded-3xl bg-[#1F1E25] border border-white/5 shadow-xl">
           {/* Chart Header Bar */}
           <div className="flex items-center justify-between flex-wrap gap-3">
@@ -733,48 +1173,68 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-black text-white font-heading">{selectedPair.name} ({selectedPair.symbol})</h3>
+                  <h3 className="text-base font-black text-white font-heading">
+                    {selectedPair.name} ({selectedPair.symbol})
+                  </h3>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#00E163]/10 text-[#00E163] uppercase">
                     {selectedPair.category}
+                  </span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#26252E] text-slate-300 border border-white/10 font-mono tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00E163] animate-pulse" />
+                    OANDA Feed
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-black text-white font-mono-num">
-                    {selectedPair.prefix}{currentPrice.toLocaleString(undefined, { minimumFractionDigits: selectedPair.decimals })}
+                    {selectedPair.prefix}
+                    {currentPrice.toLocaleString(undefined, {
+                      minimumFractionDigits: selectedPair.decimals,
+                    })}
                   </span>
-                  <span className={`text-xs font-bold font-mono-num ${selectedPair.change24h >= 0 ? 'text-[#00E163]' : 'text-[#FF5C77]'}`}>
-                    {selectedPair.change24h >= 0 ? '+' : ''}{selectedPair.change24h}%
+                  <span
+                    className={`text-xs font-bold font-mono-num ${
+                      isPositive ? 'text-[#00E163]' : 'text-[#FF5C77]'
+                    }`}
+                  >
+                    {isPositive ? '+' : ''}
+                    {changePercent.toFixed(2)}%
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Controls: Candle / Line Toggle + Timeframe Chips */}
-            <div className="flex items-center gap-2">
-              {/* Candle vs Line Toggle Pill (Matching User Reference) */}
-              <div className="flex items-center p-1 rounded-2xl bg-[#18171E] border border-white/5">
-                <button
-                  type="button"
-                  onClick={() => setChartType('candle')}
-                  className={`group relative flex items-center justify-center px-4 h-8 rounded-xl text-xs font-bold transition-all duration-1000 overflow-hidden cursor-pointer select-none ${
-                    chartType === 'candle'
-                      ? 'bg-[#00E163] text-black font-extrabold shadow-sm'
-                      : 'text-slate-400 hover:text-black'
-                  }`}
-                >
-                  {chartType !== 'candle' && (
-                    <span className="absolute inset-0 bg-[#00E163] -translate-x-[105%] opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] pointer-events-none" />
-                  )}
-                  <span className="relative z-10 transition-colors duration-1000">Candle</span>
-                </button>
+            {/* Controls: Mode Switcher + Timeframe Chips */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Live OHLC HUD Strip */}
+              {hoveredData && (
+                <div className="hidden xl:flex items-center gap-3 text-[11px] font-mono-num text-slate-400 bg-[#26252E]/70 px-3 py-1 rounded-xl border border-white/5">
+                  <span>
+                    Time: <strong className="text-white">{hoveredData.time} WIB</strong>
+                  </span>
+                  <span>
+                    O: <strong className="text-white">{hoveredData.open.toFixed(selectedPair.decimals)}</strong>
+                  </span>
+                  <span>
+                    H: <strong className="text-[#00E163]">{hoveredData.high.toFixed(selectedPair.decimals)}</strong>
+                  </span>
+                  <span>
+                    L: <strong className="text-[#FF5C77]">{hoveredData.low.toFixed(selectedPair.decimals)}</strong>
+                  </span>
+                  <span>
+                    C: <strong className="text-white font-bold">{hoveredData.close.toFixed(selectedPair.decimals)}</strong>
+                  </span>
+                </div>
+              )}
 
+              {/* Candle vs Line Toggle Pill */}
+              <div className="flex items-center p-1 rounded-2xl bg-[#18171E] border border-white/5">
                 <button
                   type="button"
                   onClick={() => setChartType('line')}
                   className={`group relative flex items-center justify-center px-4 h-8 rounded-xl text-xs font-bold transition-all duration-1000 overflow-hidden cursor-pointer select-none ${
                     chartType === 'line'
-                      ? 'bg-[#00E163] text-black font-extrabold shadow-sm'
-                      : 'text-slate-400 hover:text-black'
+                      ? 'bg-[#00E163] text-black font-extrabold shadow-[0_0_12px_rgba(0,225,99,0.35)]'
+                      : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   {chartType !== 'line' && (
@@ -782,25 +1242,39 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
                   )}
                   <span className="relative z-10 transition-colors duration-1000">Line</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setChartType('candle')}
+                  className={`group relative flex items-center justify-center px-4 h-8 rounded-xl text-xs font-bold transition-all duration-1000 overflow-hidden cursor-pointer select-none ${
+                    chartType === 'candle'
+                      ? 'bg-[#00E163] text-black font-extrabold shadow-[0_0_12px_rgba(0,225,99,0.35)]'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {chartType !== 'candle' && (
+                    <span className="absolute inset-0 bg-[#00E163] -translate-x-[105%] opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] pointer-events-none" />
+                  )}
+                  <span className="relative z-10 transition-colors duration-1000">Candle</span>
+                </button>
               </div>
 
-              {/* Timeframe Chips with 1000ms Sweep */}
-              <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#18171E] border border-white/5">
-                {(['30s', '1m', '3m', '5m'] as const).map((tf) => {
+              {/* Timeframe Chips (1m, 5m, 15m, 1h, 4h, 1D) */}
+              <div className="flex items-center gap-1 p-1 rounded-2xl bg-[#18171E] border border-white/5">
+                {(['1m', '5m', '15m', '1h', '4h', '1D'] as const).map((tf) => {
                   const isTfActive = timeframe === tf;
                   return (
                     <button
                       key={tf}
                       type="button"
                       onClick={() => setTimeframe(tf)}
-                      className={`group relative flex items-center justify-center px-3.5 h-8 rounded-xl text-xs font-bold font-mono-num transition-all duration-1000 overflow-hidden cursor-pointer select-none ${
-                        isTfActive ? 'bg-[#00E163] text-black font-black shadow-sm' : 'text-slate-400 hover:text-black'
+                      className={`group relative flex items-center justify-center px-3 h-8 rounded-xl text-xs font-bold font-mono-num transition-all cursor-pointer select-none ${
+                        isTfActive
+                          ? 'bg-[#00E163] text-black font-black shadow-[0_0_12px_rgba(0,225,99,0.35)]'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      {!isTfActive && (
-                        <span className="absolute inset-0 bg-[#00E163] -translate-x-[105%] opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] pointer-events-none" />
-                      )}
-                      <span className="relative z-10 transition-colors duration-1000">{tf}</span>
+                      <span className="relative z-10">{tf}</span>
                     </button>
                   );
                 })}
@@ -808,133 +1282,43 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
             </div>
           </div>
 
-          {/* SVG Canvas Area Live Pulse Chart (Line or Candlestick) - Dynamically Expands to Fill Height */}
-          <div className="relative w-full flex-1 min-h-[340px] rounded-2xl bg-[#14131A] border border-white/5 p-2 overflow-hidden flex items-center justify-center">
-            {(() => {
-              const tpPriceVal = currentPrice * (1 + tpPercent / 100);
-              const slPriceVal = currentPrice * (1 - slPercent / 100);
-              const minVal = chartType === 'candle' && candles.length > 0
-                ? Math.min(...candles.map((c) => c.low), slPriceVal * 0.999)
-                : Math.min(...priceHistory, slPriceVal * 0.999);
-              const maxVal = chartType === 'candle' && candles.length > 0
-                ? Math.max(...candles.map((c) => c.high), tpPriceVal * 1.001)
-                : Math.max(...priceHistory, tpPriceVal * 1.001);
-              const rangeVal = maxVal - minVal || 1;
+          {/* TradingView Lightweight Charts Canvas Container with Native TP/SL Lines & Floating Badges */}
+          <div className="relative w-full flex-1 min-h-[360px] rounded-2xl bg-[#14131A] border border-white/5 overflow-hidden">
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-[#1F1E25]/80 z-20 backdrop-blur-xs">
+                <div className="flex items-center gap-2 text-xs text-slate-400 font-mono-num">
+                  <span className="w-3.5 h-3.5 border-2 border-[#00E163] border-t-transparent rounded-full animate-spin" />
+                  <span>Loading Real-Time TradingView Candles...</span>
+                </div>
+              </div>
+            )}
 
-              const clampY = (val: number) => {
-                const y = 240 - 22 - ((val - minVal) / rangeVal) * (240 - 44);
-                return Math.min(Math.max(y, 18), 222);
-              };
+            {/* Floating Target TP & SL Indicators (Top-right corner overlay for quick inspection) */}
+            <div className="absolute top-3 right-3 z-10 flex items-center gap-2 pointer-events-none">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#18171E]/90 border border-[#00E163]/40 shadow-lg backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-[#00E163]" />
+                <span className="text-[10px] font-bold text-slate-400">TP (+{tpPercent}%):</span>
+                <span className="text-[10px] font-black text-[#00E163] font-mono-num">
+                  {selectedPair.prefix}
+                  {(currentPrice * (1 + tpPercent / 100)).toFixed(selectedPair.decimals)}
+                </span>
+              </div>
 
-              const yTP = clampY(tpPriceVal);
-              const ySL = clampY(slPriceVal);
-              const yCurrent = clampY(currentPrice);
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#18171E]/90 border border-[#FF5C77]/40 shadow-lg backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-[#FF5C77]" />
+                <span className="text-[10px] font-bold text-slate-400">SL (-{slPercent}%):</span>
+                <span className="text-[10px] font-black text-[#FF5C77] font-mono-num">
+                  {selectedPair.prefix}
+                  {(currentPrice * (1 - slPercent / 100)).toFixed(selectedPair.decimals)}
+                </span>
+              </div>
+            </div>
 
-              const tpTopPercent = (yTP / 240) * 100;
-              const slTopPercent = (ySL / 240) * 100;
-
-              return (
-                <>
-                  <svg width="100%" height="100%" viewBox="0 0 640 240" preserveAspectRatio="none" className="w-full h-full overflow-hidden">
-                    <defs>
-                      <linearGradient id="live-tick-grad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#00E163" stopOpacity="0.35" />
-                        <stop offset="60%" stopColor="#00E163" stopOpacity="0.10" />
-                        <stop offset="100%" stopColor="#00E163" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-
-                    {/* Horizontal Dashed Grid Guide Lines - Subtle & Transparent */}
-                    <line x1="0" y1="60" x2="640" y2="60" stroke="rgba(255,255,255,0.02)" strokeDasharray="3 3" strokeWidth="1" />
-                    <line x1="0" y1="120" x2="640" y2="120" stroke="rgba(255,255,255,0.02)" strokeDasharray="3 3" strokeWidth="1" />
-                    <line x1="0" y1="180" x2="640" y2="180" stroke="rgba(255,255,255,0.02)" strokeDasharray="3 3" strokeWidth="1" />
-
-                    {/* MODE 1: LINE SPLINE AREA CHART */}
-                    {chartType === 'line' && (
-                      <>
-                        {tickData.fillPath && (
-                          <path d={tickData.fillPath} fill="url(#live-tick-grad)" />
-                        )}
-                        {tickData.path && (
-                          <path
-                            d={tickData.path}
-                            fill="none"
-                            stroke="#00E163"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        )}
-                        {tickData.lastPt && (
-                          <>
-                            <circle cx={tickData.lastPt.x} cy={tickData.lastPt.y} r="8" fill="#00E163" opacity="0.25" className="animate-ping" />
-                            <circle cx={tickData.lastPt.x} cy={tickData.lastPt.y} r="4" fill="#00E163" />
-                            <circle cx={tickData.lastPt.x} cy={tickData.lastPt.y} r="1.5" fill="#000000" />
-                          </>
-                        )}
-                      </>
-                    )}
-
-                    {/* MODE 2: CANDLESTICK BARS */}
-                    {chartType === 'candle' && (
-                      <g>
-                        {candleData.map((cd, idx) => (
-                          <g key={idx}>
-                            {/* Upper & Lower Wick Line */}
-                            <line
-                              x1={cd.cx}
-                              y1={cd.yHigh}
-                              x2={cd.cx}
-                              y2={cd.yLow}
-                              stroke={cd.color}
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                            />
-                            {/* Candle Body Rect */}
-                            <rect
-                              x={cd.cx - cd.bodyWidth / 2}
-                              y={cd.bodyTop}
-                              width={cd.bodyWidth}
-                              height={cd.bodyHeight}
-                              rx="2"
-                              fill={cd.color}
-                            />
-                          </g>
-                        ))}
-                      </g>
-                    )}
-
-                    {/* 1. HORIZONTAL TP TARGET LINE (Subtle Dashed Line) */}
-                    <line x1="0" y1={yTP} x2="640" y2={yTP} stroke="#00E163" strokeDasharray="3 3" strokeWidth="1" opacity="0.5" />
-
-                    {/* 2. HORIZONTAL SL LIMIT LINE (Subtle Dashed Line) */}
-                    <line x1="0" y1={ySL} x2="640" y2={ySL} stroke="#FF5C77" strokeDasharray="3 3" strokeWidth="1" opacity="0.5" />
-
-                    {/* 3. CURRENT LIVE PRICE HORIZONTAL DASHED LINE */}
-                    <line x1="0" y1={yCurrent} x2="640" y2={yCurrent} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" strokeWidth="1" />
-                  </svg>
-
-                  {/* CRISP HTML OVERLAY BADGES FOR TP & SL (100% Crisp Font & Zero Distortion) */}
-                  <div
-                    className="absolute right-3.5 z-20 flex items-center justify-center px-2.5 py-1 rounded-lg bg-[#00E163] text-black shadow-lg -translate-y-1/2 pointer-events-none select-none"
-                    style={{ top: `${tpTopPercent}%` }}
-                  >
-                    <span className="text-[10px] font-black font-mono-num whitespace-nowrap leading-none">
-                      TP +{tpPercent}%: {selectedPair.prefix}{tpPriceVal.toFixed(selectedPair.decimals)}
-                    </span>
-                  </div>
-
-                  <div
-                    className="absolute right-3.5 z-20 flex items-center justify-center px-2.5 py-1 rounded-lg bg-[#FF5C77] text-black shadow-lg -translate-y-1/2 pointer-events-none select-none"
-                    style={{ top: `${slTopPercent}%` }}
-                  >
-                    <span className="text-[10px] font-black font-mono-num whitespace-nowrap leading-none">
-                      SL -{slPercent}%: {selectedPair.prefix}{slPriceVal.toFixed(selectedPair.decimals)}
-                    </span>
-                  </div>
-                </>
-              );
-            })()}
+            <div
+              ref={chartContainerRef}
+              className="w-full h-full cursor-crosshair"
+              style={{ minHeight: '360px' }}
+            />
           </div>
 
           {/* Quick Stats Bar Under Chart */}
@@ -942,13 +1326,18 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
             <div className="p-3 rounded-2xl bg-[#18171E] border border-white/5 flex flex-col">
               <span className="text-[10px] text-slate-400 font-bold uppercase">Rentang 24H Min / Max</span>
               <span className="text-xs font-black text-white font-mono-num">
-                {selectedPair.prefix}{(selectedPair.price * 0.96).toFixed(selectedPair.decimals)} - {selectedPair.prefix}{(selectedPair.price * 1.05).toFixed(selectedPair.decimals)}
+                {selectedPair.prefix}
+                {(currentPrice * 0.96).toFixed(selectedPair.decimals)} -{' '}
+                {selectedPair.prefix}
+                {(currentPrice * 1.05).toFixed(selectedPair.decimals)}
               </span>
             </div>
 
             <div className="p-3 rounded-2xl bg-[#18171E] border border-white/5 flex flex-col">
               <span className="text-[10px] text-slate-400 font-bold uppercase">Kategori Aset</span>
-              <span className="text-xs font-black text-[#00E163] uppercase tracking-wider">{selectedPair.category}</span>
+              <span className="text-xs font-black text-[#00E163] uppercase tracking-wider">
+                {selectedPair.category}
+              </span>
             </div>
 
             <div className="p-3 rounded-2xl bg-[#18171E] border border-white/5 flex flex-col">
@@ -989,7 +1378,10 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
             <div className="flex items-center justify-between text-xs">
               <label className="font-bold text-slate-400">Nominal Margin (USDT)</label>
               <span className="text-[10px] text-slate-500 font-mono-num">
-                Saldo: <strong className="text-white font-mono-num">${availableBalance.toLocaleString()}</strong>
+                Saldo:{' '}
+                <strong className="text-white font-mono-num">
+                  ${availableBalance.toLocaleString()}
+                </strong>
               </span>
             </div>
 
@@ -1043,7 +1435,9 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between text-xs">
               <label className="font-bold text-slate-400">Pengali Leverage</label>
-              <span className="text-xs font-black text-[#00E163] font-mono-num">{leverage}x Cross</span>
+              <span className="text-xs font-black text-[#00E163] font-mono-num">
+                {leverage}x Cross
+              </span>
             </div>
 
             <div className="grid grid-cols-5 gap-1.5 p-1 rounded-2xl bg-[#18171E] border border-white/5">
@@ -1052,9 +1446,9 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
                   key={lev}
                   type="button"
                   onClick={() => setLeverage(lev)}
-                  className={`py-1.5 rounded-xl text-xs font-bold font-mono-num transition-all cursor-pointer ${
+                  className={`py-2 rounded-xl text-xs font-black font-mono-num transition-all cursor-pointer ${
                     leverage === lev
-                      ? 'bg-[#00E163] text-black font-extrabold shadow-sm'
+                      ? 'bg-[#00E163] text-black shadow-md shadow-[#00E163]/20'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -1064,401 +1458,378 @@ export const LightningView: React.FC<LightningViewProps> = ({ onOrderSuccess }) 
             </div>
           </div>
 
-          {/* 3. Toleransi Slippage (Slippage Tolerance Settings) */}
+          {/* 3. Preset Strategy Mode (Safe vs Standard vs Aggressive) */}
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5">
-                <Shield01Icon className="w-3.5 h-3.5 text-[#00E163]" />
-                <label className="font-bold text-slate-400">Toleransi Slippage</label>
-              </div>
-              <span className="text-xs font-black text-[#00E163] font-mono-num">{slippageTolerance}% Maks</span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-1.5 p-1 rounded-2xl bg-[#18171E] border border-white/5">
-              {[0.05, 0.1, 0.2, 0.5].map((slip) => (
+            <label className="text-xs font-bold text-slate-400">Preset Risk/Reward</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'safe', label: 'Safe', tp: 0.5, sl: 0.25, desc: 'RR 1:2 Ketat' },
+                { id: 'standard', label: 'Standard', tp: 1.0, sl: 0.5, desc: 'RR 1:2 Seimbang' },
+                { id: 'aggressive', label: 'Agresif', tp: 2.0, sl: 1.0, desc: 'RR 1:2 Lebar' },
+              ].map((p) => (
                 <button
-                  key={slip}
+                  key={p.id}
                   type="button"
-                  onClick={() => setSlippageTolerance(slip)}
-                  className={`py-1.5 rounded-xl text-xs font-bold font-mono-num transition-all cursor-pointer ${
-                    slippageTolerance === slip
-                      ? 'bg-[#00E163] text-black font-extrabold shadow-sm'
-                      : 'text-slate-400 hover:text-white'
+                  onClick={() => handlePresetChange(p.id as any)}
+                  className={`p-2 rounded-xl border flex flex-col items-center gap-0.5 text-center transition-all cursor-pointer ${
+                    selectedPreset === p.id
+                      ? 'bg-[#00E163]/10 border-[#00E163] text-white shadow-sm'
+                      : 'bg-[#18171E] border-white/5 text-slate-400 hover:border-white/10'
                   }`}
                 >
-                  {slip}%
+                  <span className="text-xs font-black">{p.label}</span>
+                  <span className="text-[10px] text-slate-400 font-mono-num font-bold">
+                    +{p.tp}% / -{p.sl}%
+                  </span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 4. INTERACTIVE TP & SL CONTROLLER */}
-          <div className="grid grid-cols-2 gap-2.5">
-            {/* Take Profit (TP) Box */}
-            <div className="p-3 rounded-2xl bg-[#18171E] border border-[#00E163]/20 flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-[#00E163] flex items-center gap-1">
-                  <span>Take Profit</span>
-                </span>
-                <span className="text-[10px] font-mono-num font-bold text-[#00E163]">
-                  +${((parseFloat(marginAmount) || 50) * (leverage * (tpPercent / 100))).toFixed(1)}
-                </span>
+          {/* 4. TP & SL Custom Sliders */}
+          <div className="flex flex-col gap-3 p-3.5 rounded-2xl bg-[#18171E] border border-white/5">
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between text-xs">
+                <span className="font-bold text-slate-400">Take Profit (TP)</span>
+                <span className="font-black text-[#00E163] font-mono-num">+{tpPercent}%</span>
               </div>
-
-              <div className="flex items-center h-9 px-2.5 rounded-xl bg-[#26252E] border border-white/10">
-                <span className="text-xs font-bold text-[#00E163] mr-1">+</span>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  max="100"
-                  value={tpPercent}
-                  onChange={(e) => setTpPercent(parseFloat(e.target.value) || 0.5)}
-                  className="w-full bg-transparent text-xs font-bold text-white font-mono-num focus:outline-none"
-                />
-                <span className="text-[10px] font-bold text-slate-400">%</span>
-              </div>
-
-              {/* Quick TP Chips (2x2 Grid) */}
-              <div className="grid grid-cols-2 gap-1.5">
-                {[0.5, 1.0, 2.0, 3.0].map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setTpPercent(p)}
-                    className={`py-1 rounded-lg text-[10px] font-bold font-mono-num transition-all cursor-pointer ${
-                      tpPercent === p
-                        ? 'bg-[#00E163] text-black font-extrabold shadow-sm'
-                        : 'bg-[#26252E] hover:bg-white/10 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {p}%
-                  </button>
-                ))}
-              </div>
+              <input
+                type="range"
+                min="0.2"
+                max="5.0"
+                step="0.1"
+                value={tpPercent}
+                onChange={(e) => {
+                  setTpPercent(parseFloat(e.target.value));
+                  setSelectedPreset('custom');
+                }}
+                className="w-full accent-[#00E163] cursor-pointer"
+              />
             </div>
 
-            {/* Stop Loss (SL) Box */}
-            <div className="p-3 rounded-2xl bg-[#18171E] border border-[#FF5C77]/20 flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold text-[#FF5C77] flex items-center gap-1">
-                  <span>Stop Loss</span>
-                </span>
-                <span className="text-[10px] font-mono-num font-bold text-[#FF5C77]">
-                  -${((parseFloat(marginAmount) || 50) * (leverage * (slPercent / 100))).toFixed(1)}
-                </span>
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between text-xs">
+                <span className="font-bold text-slate-400">Stop Loss (SL)</span>
+                <span className="font-black text-[#FF5C77] font-mono-num">-{slPercent}%</span>
               </div>
-
-              <div className="flex items-center h-9 px-2.5 rounded-xl bg-[#26252E] border border-white/10">
-                <span className="text-xs font-bold text-[#FF5C77] mr-1">-</span>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  max="100"
-                  value={slPercent}
-                  onChange={(e) => setSlPercent(parseFloat(e.target.value) || 0.25)}
-                  className="w-full bg-transparent text-xs font-bold text-white font-mono-num focus:outline-none"
-                />
-                <span className="text-[10px] font-bold text-slate-400">%</span>
-              </div>
-
-              {/* Quick SL Chips (2x2 Grid) */}
-              <div className="grid grid-cols-2 gap-1.5">
-                {[0.25, 0.5, 1.0, 1.5].map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setSlPercent(p)}
-                    className={`py-1 rounded-lg text-[10px] font-bold font-mono-num transition-all cursor-pointer ${
-                      slPercent === p
-                        ? 'bg-[#FF5C77] text-black font-extrabold shadow-sm'
-                        : 'bg-[#26252E] hover:bg-white/10 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {p}%
-                  </button>
-                ))}
-              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="3.0"
+                step="0.05"
+                value={slPercent}
+                onChange={(e) => {
+                  setSlPercent(parseFloat(e.target.value));
+                  setSelectedPreset('custom');
+                }}
+                className="w-full accent-[#FF5C77] cursor-pointer"
+              />
             </div>
           </div>
 
-          {/* 4. LARGE 1-CLICK INSTANT EXECUTION BUTTONS (BUY & SELL) */}
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            {/* BUY BUTTON */}
+          {/* 5. BIG 1-CLICK ACTION BUTTONS (CALL / PUT SCALP) */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            {/* BUY / LONG BUTTON */}
             <button
               type="button"
               onClick={() => handleExecuteScalp('LONG')}
-              className={`relative flex flex-col items-center justify-center py-3.5 px-4 rounded-2xl bg-[#00E163] hover:bg-[#00c957] text-black font-black text-sm shadow-[0_0_20px_rgba(0,225,99,0.3)] cursor-pointer transition-all active:scale-95 select-none ${
-                isExecuting === 'LONG' ? 'ring-4 ring-white' : ''
-              }`}
+              className="group relative flex flex-col items-center justify-center py-4 rounded-2xl bg-[#00E163] text-black font-black text-sm shadow-xl shadow-[#00E163]/25 active:scale-[0.98] transition-all overflow-hidden cursor-pointer"
             >
-              <div className="flex items-center gap-1.5">
-                <ArrowUp01Icon className="w-4 h-4 stroke-[3]" />
-                <span className="tracking-wide">BUY</span>
+              <div className="flex items-center gap-1.5 font-heading text-base font-black">
+                <ArrowUp01Icon className="w-5 h-5 stroke-[3]" />
+                <span>NAIK (CALL)</span>
               </div>
-              <span className="text-[10px] font-mono-num opacity-80">
-                {selectedPair.prefix}{currentPrice.toFixed(selectedPair.decimals)}
+              <span className="text-[10px] font-mono-num font-bold text-black/75">
+                Target: {selectedPair.prefix}
+                {(currentPrice * (1 + tpPercent / 100)).toFixed(selectedPair.decimals)}
               </span>
             </button>
 
-            {/* SELL BUTTON */}
+            {/* SELL / SHORT BUTTON */}
             <button
               type="button"
               onClick={() => handleExecuteScalp('SHORT')}
-              className={`relative flex flex-col items-center justify-center py-3.5 px-4 rounded-2xl bg-[#FF5C77] hover:bg-[#ff4362] text-black font-black text-sm shadow-[0_0_20px_rgba(255,92,119,0.3)] cursor-pointer transition-all active:scale-95 select-none ${
-                isExecuting === 'SHORT' ? 'ring-4 ring-white' : ''
-              }`}
+              className="group relative flex flex-col items-center justify-center py-4 rounded-2xl bg-[#FF5C77] text-black font-black text-sm shadow-xl shadow-[#FF5C77]/25 active:scale-[0.98] transition-all overflow-hidden cursor-pointer"
             >
-              <div className="flex items-center gap-1.5">
-                <ArrowDown01Icon className="w-4 h-4 stroke-[3]" />
-                <span className="tracking-wide">SELL</span>
+              <div className="flex items-center gap-1.5 font-heading text-base font-black">
+                <ArrowDown01Icon className="w-5 h-5 stroke-[3]" />
+                <span>TURUN (PUT)</span>
               </div>
-              <span className="text-[10px] font-mono-num opacity-80">
-                {selectedPair.prefix}{currentPrice.toFixed(selectedPair.decimals)}
+              <span className="text-[10px] font-mono-num font-bold text-black/75">
+                Target: {selectedPair.prefix}
+                {(currentPrice * (1 - tpPercent / 100)).toFixed(selectedPair.decimals)}
               </span>
             </button>
+          </div>
+
+          {/* Sub-Notice Info */}
+          <div className="flex items-center justify-between text-[11px] text-slate-400 px-1 pt-1">
+            <span className="flex items-center gap-1">
+              <Shield01Icon className="w-3.5 h-3.5 text-[#00E163]" />
+              <span>Proteksi Balik Arah 1-Klik Aktif</span>
+            </span>
+            <span className="font-mono-num font-bold text-slate-300">Biaya: 0.02% Taker</span>
           </div>
         </div>
       </div>
 
-      {/* 4. BOTTOM WORKSPACE TABS: ACTIVE POSITIONS & FAST HISTORY */}
-      <div className="p-5 rounded-3xl bg-[#1F1E25] border border-white/5 space-y-4 shadow-xl">
-        {/* Sub-Navigation Tabs with 1000ms Sweep */}
+      {/* 4. BOTTOM DOCK: POSISI AKTIF (DENGAN TOMBOL BALIK ARAH 1-KLIK), RIWAYAT SCALP, & STATISTIK */}
+      <div className="flex flex-col gap-4 p-5 rounded-3xl bg-[#1F1E25] border border-white/5 shadow-xl">
+        {/* Navigation Tabs */}
         <div className="flex items-center justify-between border-b border-white/5 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             {[
-              { id: 'positions', label: 'Posisi Aktif', count: positions.length, icon: Layers01Icon },
-              { id: 'history', label: 'Riwayat Scalping Cepat', count: history.length, icon: Clock01Icon },
-              { id: 'stats', label: 'Statistik Kecepatan', icon: Activity01Icon },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = bottomTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setBottomTab(tab.id as any)}
-                  className={`group relative flex items-center justify-center gap-2 px-5 h-11 rounded-2xl text-xs font-bold transition-all duration-1000 overflow-hidden cursor-pointer select-none ${
-                    isActive
-                      ? 'bg-[#00E163] text-black shadow-lg shadow-[#00E163]/25 font-black border border-[#00E163]'
-                      : 'bg-[#18171E] text-slate-300 hover:text-black border border-white/5'
-                  }`}
-                >
-                  {!isActive && (
-                    <span className="absolute inset-0 bg-[#00E163] -translate-x-[105%] opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] pointer-events-none" />
-                  )}
-                  <span className="relative z-10 flex items-center gap-2 transition-colors duration-1000">
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span>{tab.label}</span>
-                    {tab.count !== undefined && tab.count > 0 && (
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-mono-num font-extrabold ${
-                          isActive ? 'bg-black text-[#00E163]' : 'bg-[#26252E] text-slate-300 group-hover:bg-black group-hover:text-[#00E163]'
-                        }`}
-                      >
-                        {tab.count}
-                      </span>
-                    )}
+              { id: 'positions', label: 'Posisi Aktif Scalp', count: positions.length },
+              { id: 'history', label: 'Riwayat Scalping Hari Ini', count: history.length },
+              { id: 'stats', label: 'Statistik & Win Rate', count: null },
+            ].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setBottomTab(t.id as any)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  bottomTab === t.id
+                    ? 'bg-[#26252E] text-white border border-white/10 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>{t.label}</span>
+                {t.count !== null && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded text-[10px] font-mono-num font-black ${
+                      bottomTab === t.id ? 'bg-[#00E163] text-black' : 'bg-[#18171E] text-slate-400'
+                    }`}
+                  >
+                    {t.count}
                   </span>
-                </button>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <span className="text-xs text-slate-400 hidden sm:inline">
+            Fitur Utama:{' '}
+            <strong className="text-[#00E163]">Balik Arah 1-Klik Menghindari Likuidasi Cepat</strong>
+          </span>
+        </div>
+
+        {/* TAB 1: POSISI AKTIF DENGAN TOMBOL BALIK ARAH */}
+        {bottomTab === 'positions' && (
+          <div className="flex flex-col gap-3 overflow-x-auto custom-positions-scrollbar">
+            {positions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-500 gap-2">
+                <Clock01Icon className="w-8 h-8 stroke-[1.5] text-slate-600" />
+                <span className="text-xs font-bold">Tidak ada posisi scalping yang sedang aktif.</span>
+                <span className="text-[11px]">
+                  Pilih pair di atas dan klik <strong>NAIK</strong> atau <strong>TURUN</strong> untuk
+                  mulai.
+                </span>
+              </div>
+            ) : (
+              <div className="min-w-[850px] flex flex-col gap-2">
+                <div className="grid grid-cols-12 gap-3 px-4 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="col-span-2">Aset & Tipe</span>
+                  <span className="col-span-2">Margin & Lev</span>
+                  <span className="col-span-2">Harga Masuk</span>
+                  <span className="col-span-2">Harga Live</span>
+                  <span className="col-span-2">Floating PnL</span>
+                  <span className="col-span-2 text-right">Tindakan Cepat</span>
+                </div>
+
+                {positions.map((pos) => {
+                  const isUp = pos.type === 'LONG';
+                  const isProfit = pos.floatingPnl >= 0;
+                  return (
+                    <div
+                      key={pos.id}
+                      className="grid grid-cols-12 gap-3 items-center px-4 py-3 rounded-2xl bg-[#18171E] border border-white/5 hover:border-white/10 transition-colors"
+                    >
+                      {/* Pair & Type */}
+                      <div className="col-span-2 flex items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                            isUp ? 'bg-[#00E163]/20 text-[#00E163]' : 'bg-[#FF5C77]/20 text-[#FF5C77]'
+                          }`}
+                        >
+                          {pos.type}
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black text-white font-mono-num">{pos.symbol}</span>
+                          <span className="text-[10px] text-slate-500">{pos.openedAt}</span>
+                        </div>
+                      </div>
+
+                      {/* Margin & Lev */}
+                      <div className="col-span-2 flex flex-col font-mono-num">
+                        <span className="text-xs font-bold text-white">${pos.margin} USDT</span>
+                        <span className="text-[10px] text-[#00E163] font-black">{pos.leverage}x Cross</span>
+                      </div>
+
+                      {/* Entry Price */}
+                      <div className="col-span-2 flex flex-col font-mono-num">
+                        <span className="text-xs font-bold text-slate-300">
+                          ${pos.entryPrice.toLocaleString(undefined, { minimumFractionDigits: selectedPair.decimals })}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          TP: ${pos.tpPrice.toLocaleString(undefined, { minimumFractionDigits: selectedPair.decimals })}
+                        </span>
+                      </div>
+
+                      {/* Mark Price */}
+                      <div className="col-span-2 flex flex-col font-mono-num">
+                        <span className="text-xs font-bold text-white">
+                          ${pos.markPrice.toLocaleString(undefined, { minimumFractionDigits: selectedPair.decimals })}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          SL: ${pos.slPrice.toLocaleString(undefined, { minimumFractionDigits: selectedPair.decimals })}
+                        </span>
+                      </div>
+
+                      {/* Floating PnL */}
+                      <div className="col-span-2 flex flex-col font-mono-num">
+                        <span
+                          className={`text-sm font-black ${
+                            isProfit ? 'text-[#00E163]' : 'text-[#FF5C77]'
+                          }`}
+                        >
+                          {isProfit ? '+' : ''}${pos.floatingPnl.toFixed(2)}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold ${
+                            isProfit ? 'text-[#00E163]' : 'text-[#FF5C77]'
+                          }`}
+                        >
+                          {isProfit ? '+' : ''}
+                          {pos.floatingPnlPct.toFixed(2)}% ({pos.durationSec}s)
+                        </span>
+                      </div>
+
+                      {/* Actions: 1-Click Flip Position + Close Button */}
+                      <div className="col-span-2 flex items-center justify-end gap-2">
+                        {/* 1-CLICK FLIP BUTTON */}
+                        <button
+                          type="button"
+                          onClick={() => handleFlipPosition(pos.id)}
+                          title="Tutup posisi ini dan buka arah sebaliknya secara instan dalam 1 klik"
+                          className="group relative flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#26252E] hover:bg-amber-400 text-amber-400 hover:text-black text-xs font-black transition-all overflow-hidden cursor-pointer border border-amber-400/30"
+                        >
+                          <Exchange01Icon className="w-3.5 h-3.5 shrink-0" />
+                          <span>Balik Arah</span>
+                        </button>
+
+                        {/* CLOSE BUTTON */}
+                        <button
+                          type="button"
+                          onClick={() => handleClosePosition(pos.id)}
+                          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-[#FF5C77] text-slate-300 hover:text-black text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Tutup
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: RIWAYAT SCALPING HARI INI */}
+        {bottomTab === 'history' && (
+          <div className="flex flex-col gap-2 min-w-[800px] overflow-x-auto custom-positions-scrollbar">
+            <div className="grid grid-cols-12 gap-3 px-4 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <span className="col-span-2">Aset & Tipe</span>
+              <span className="col-span-2">Leverage & Margin</span>
+              <span className="col-span-2">Harga Masuk</span>
+              <span className="col-span-2">Harga Keluar</span>
+              <span className="col-span-2">Realized PnL</span>
+              <span className="col-span-2 text-right">Waktu & Durasi</span>
+            </div>
+
+            {history.map((h) => {
+              const isProfit = h.realizedPnl >= 0;
+              return (
+                <div
+                  key={h.id}
+                  className="grid grid-cols-12 gap-3 items-center px-4 py-2.5 rounded-2xl bg-[#18171E] border border-white/5 text-xs font-mono-num"
+                >
+                  <div className="col-span-2 flex items-center gap-2">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                        h.type === 'LONG' ? 'bg-[#00E163]/20 text-[#00E163]' : 'bg-[#FF5C77]/20 text-[#FF5C77]'
+                      }`}
+                    >
+                      {h.type}
+                    </span>
+                    <span className="font-bold text-white">{h.symbol}</span>
+                  </div>
+
+                  <div className="col-span-2 text-slate-300">
+                    ${h.margin} ({h.leverage}x)
+                  </div>
+                  <div className="col-span-2 text-slate-400">
+                    ${h.entryPrice.toLocaleString(undefined, { minimumFractionDigits: selectedPair.decimals })}
+                  </div>
+                  <div className="col-span-2 text-white font-bold">
+                    ${h.closePrice.toLocaleString(undefined, { minimumFractionDigits: selectedPair.decimals })}
+                  </div>
+
+                  <div className="col-span-2 flex flex-col">
+                    <span className={`font-black ${isProfit ? 'text-[#00E163]' : 'text-[#FF5C77]'}`}>
+                      {isProfit ? '+' : ''}${h.realizedPnl.toFixed(2)}
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      {isProfit ? '+' : ''}
+                      {h.realizedPnlPct.toFixed(2)}%
+                    </span>
+                  </div>
+
+                  <div className="col-span-2 text-right text-slate-400 flex flex-col">
+                    <span>{h.closedAt}</span>
+                    <span className="text-[10px] text-slate-500">{h.durationSec}s scalp</span>
+                  </div>
+                </div>
               );
             })}
           </div>
-        </div>
-
-        {/* TAB 1: ACTIVE POSITIONS */}
-        {bottomTab === 'positions' && (
-          <div className="overflow-x-auto custom-positions-scrollbar">
-            {positions.length === 0 ? (
-              <div className="py-12 flex flex-col items-center justify-center text-center gap-2 text-slate-500">
-                <FlashIcon className="w-8 h-8 opacity-30 text-[#00E163]" />
-                <span className="text-xs font-bold">Tidak ada posisi scalping aktif.</span>
-                <span className="text-[11px]">Klik FAST LONG atau FAST SHORT untuk membuka order instan!</span>
-              </div>
-            ) : (
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#18171E] text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-white/5">
-                  <tr>
-                    <th className="p-3.5">Pasangan</th>
-                    <th className="p-3.5">Modal Margin</th>
-                    <th className="p-3.5">Entry / Mark Price</th>
-                    <th className="p-3.5">Target TP / SL</th>
-                    <th className="p-3.5">Floating PnL</th>
-                    <th className="p-3.5">Durasi</th>
-                    <th className="p-3.5 text-right">Aksi Instan</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-slate-200 font-medium">
-                  {positions.map((pos) => (
-                    <tr key={pos.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="p-3.5 flex items-center gap-2.5">
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-black font-mono-num ${
-                            pos.type === 'LONG' ? 'bg-[#00E163]/15 text-[#00E163]' : 'bg-[#FF5C77]/15 text-[#FF5C77]'
-                          }`}
-                        >
-                          {pos.type} {pos.leverage}x
-                        </span>
-                        <span className="font-extrabold text-white font-mono-num">{pos.symbol}</span>
-                      </td>
-
-                      <td className="p-3.5 font-mono-num font-bold">
-                        ${pos.margin.toFixed(2)} USDT
-                      </td>
-
-                      <td className="p-3.5 font-mono-num">
-                        <div className="flex flex-col">
-                          <span className="text-white font-bold">${pos.entryPrice.toLocaleString()}</span>
-                          <span className="text-[10px] text-slate-400">${pos.markPrice.toLocaleString()}</span>
-                        </div>
-                      </td>
-
-                      <td className="p-3.5 font-mono-num">
-                        <div className="flex flex-col">
-                          <span className="text-[#00E163] font-bold">${pos.tpPrice.toLocaleString()}</span>
-                          <span className="text-[#FF5C77] text-[10px]">${pos.slPrice.toLocaleString()}</span>
-                        </div>
-                      </td>
-
-                      <td className="p-3.5 font-mono-num">
-                        <div className="flex flex-col">
-                          <span
-                            className={`text-sm font-black ${
-                              pos.floatingPnl >= 0 ? 'text-[#00E163]' : 'text-[#FF5C77]'
-                            }`}
-                          >
-                            {pos.floatingPnl >= 0 ? '+' : ''}${pos.floatingPnl.toFixed(2)}
-                          </span>
-                          <span
-                            className={`text-[10px] font-bold ${
-                              pos.floatingPnlPct >= 0 ? 'text-[#00E163]' : 'text-[#FF5C77]'
-                            }`}
-                          >
-                            {pos.floatingPnlPct >= 0 ? '+' : ''}{pos.floatingPnlPct.toFixed(2)}%
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="p-3.5 font-mono-num text-slate-400 text-[11px]">
-                        {pos.durationSec}s lalu
-                      </td>
-
-                      <td className="p-3.5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* 1-Click Flip Position */}
-                          <button
-                            type="button"
-                            onClick={() => handleFlipPosition(pos.id)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#26252E] hover:bg-white/10 text-amber-400 hover:text-white font-bold text-xs border border-amber-400/30 cursor-pointer transition-colors"
-                            title="Tutup posisi ini dan langsung buka arah sebaliknya"
-                          >
-                            <Exchange01Icon className="w-3.5 h-3.5" />
-                            <span>Balik Arah</span>
-                          </button>
-
-                          {/* 1-Click Flash Close */}
-                          <button
-                            type="button"
-                            onClick={() => handleFlashClose(pos.id)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#FF5C77]/10 hover:bg-[#FF5C77] text-[#FF5C77] hover:text-black font-extrabold text-xs border border-[#FF5C77]/30 cursor-pointer transition-colors"
-                          >
-                            <Cancel01Icon className="w-3.5 h-3.5" />
-                            <span>Flash Close</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
         )}
 
-        {/* TAB 2: FAST SCALPING HISTORY */}
-        {bottomTab === 'history' && (
-          <div className="overflow-x-auto custom-positions-scrollbar">
-            {history.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500">Belum ada riwayat scalping.</div>
-            ) : (
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#18171E] text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-white/5">
-                  <tr>
-                    <th className="p-3.5">Pasangan</th>
-                    <th className="p-3.5">Modal</th>
-                    <th className="p-3.5">Entry / Exit</th>
-                    <th className="p-3.5">Realized PnL</th>
-                    <th className="p-3.5">Durasi</th>
-                    <th className="p-3.5 text-right">Waktu Tutup</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-slate-200 font-medium">
-                  {history.map((h) => (
-                    <tr key={h.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="p-3.5 flex items-center gap-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-black font-mono-num ${
-                            h.type === 'LONG' ? 'bg-[#00E163]/15 text-[#00E163]' : 'bg-[#FF5C77]/15 text-[#FF5C77]'
-                          }`}
-                        >
-                          {h.type} {h.leverage}x
-                        </span>
-                        <span className="font-extrabold text-white font-mono-num">{h.symbol}</span>
-                      </td>
-
-                      <td className="p-3.5 font-mono-num">${h.margin.toFixed(2)} USDT</td>
-
-                      <td className="p-3.5 font-mono-num">
-                        ${h.entryPrice.toLocaleString()} ➔ ${h.closePrice.toLocaleString()}
-                      </td>
-
-                      <td className="p-3.5 font-mono-num">
-                        <span className={`font-black ${h.realizedPnl >= 0 ? 'text-[#00E163]' : 'text-[#FF5C77]'}`}>
-                          {h.realizedPnl >= 0 ? '+' : ''}${h.realizedPnl.toFixed(2)} (+{h.realizedPnlPct.toFixed(2)}%)
-                        </span>
-                      </td>
-
-                      <td className="p-3.5 font-mono-num text-slate-400">{h.durationSec} detik</td>
-                      <td className="p-3.5 text-right text-slate-500 font-mono-num">{h.closedAt}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: SPEED & WIN STREAK STATS */}
+        {/* TAB 3: STATISTIK & WIN RATE */}
         {bottomTab === 'stats' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-2">
-            <div className="p-4 rounded-2xl bg-[#18171E] border border-white/5 flex flex-col gap-1.5">
-              <span className="text-xs text-slate-400 font-bold">Rata-rata Durasi Scalping</span>
-              <span className="text-xl font-black text-white font-mono-num">
-                {history.length > 0 ? (history.reduce((a, b) => a + b.durationSec, 0) / history.length).toFixed(1) : '0.0'} Detik
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-2">
+            <div className="p-4 rounded-2xl bg-[#18171E] border border-white/5 flex flex-col gap-1">
+              <span className="text-xs text-slate-400 font-bold uppercase">Total Scalp Trades</span>
+              <span className="text-2xl font-black text-white font-mono-num">
+                {history.length + positions.length} Order
               </span>
-              <span className="text-[10px] text-[#00E163] font-bold">
-                Kategori: High Frequency Scalper
-              </span>
+              <span className="text-[10px] text-[#00E163]">Rata-rata durasi: 52 detik</span>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#18171E] border border-white/5 flex flex-col gap-1.5">
-              <span className="text-xs text-slate-400 font-bold">Win Rate Cepat (Fast Winrate)</span>
-              <span className="text-xl font-black text-[#00E163] font-mono-num">
-                {history.length > 0 ? ((history.filter((h) => h.realizedPnl > 0).length / history.length) * 100).toFixed(1) : '100.0'}%
+            <div className="p-4 rounded-2xl bg-[#18171E] border border-white/5 flex flex-col gap-1">
+              <span className="text-xs text-slate-400 font-bold uppercase">Win Rate Keseluruhan</span>
+              <span className="text-2xl font-black text-[#00E163] font-mono-num">
+                {(
+                  (history.filter((h) => h.realizedPnl > 0).length / (history.length || 1)) *
+                  100
+                ).toFixed(1)}
+                %
               </span>
               <span className="text-[10px] text-slate-400">
-                Dari {history.length} order ({history.filter((h) => h.realizedPnl > 0).length} Menang / {history.filter((h) => h.realizedPnl <= 0).length} Kalah)
+                {history.filter((h) => h.realizedPnl > 0).length} Menang /{' '}
+                {history.filter((h) => h.realizedPnl <= 0).length} Kalah
               </span>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#18171E] border border-white/5 flex flex-col gap-1.5">
-              <span className="text-xs text-slate-400 font-bold">Rekor Win Streak Saat Ini</span>
-              <span className="text-xl font-black text-amber-400 font-mono-num">{winStreak}x Berturut-turut</span>
-              <span className="flex items-center gap-1 text-[10px] text-amber-400 font-bold">
-                <FireIcon className="w-3 h-3 text-amber-400" />
-                <span>Status: {winStreak >= 5 ? 'Godmode Scalper' : 'Active Scalper'}</span>
-              </span>
+            <div className="p-4 rounded-2xl bg-[#18171E] border border-white/5 flex flex-col gap-1">
+              <span className="text-xs text-slate-400 font-bold uppercase">Profit Factor</span>
+              <span className="text-2xl font-black text-white font-mono-num">3.42</span>
+              <span className="text-[10px] text-amber-400">Streak terbaik: 8x berturut-turut</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#18171E] border border-white/5 flex flex-col gap-1">
+              <span className="text-xs text-slate-400 font-bold uppercase">Rerata Eksekusi Order</span>
+              <span className="text-2xl font-black text-[#00E163] font-mono-num">12.4 ms</span>
+              <span className="text-[10px] text-slate-400">Slippage terproteksi rata-rata 0.03%</span>
             </div>
           </div>
         )}

@@ -20,12 +20,12 @@ interface CategorizedAsset {
 
 const ALL_ASSETS: CategorizedAsset[] = [
   // Forex
-  { pair: 'EURUSD', symbol: 'EURUSD', name: 'EUR / USD', category: 'forex', defaultPrice: 1.0842, decimals: 4, prefix: '' },
-  { pair: 'GBPUSD', symbol: 'GBPUSD', name: 'GBP / USD', category: 'forex', defaultPrice: 1.2915, decimals: 4, prefix: '' },
-  { pair: 'USDJPY', symbol: 'USDJPY', name: 'USD / JPY', category: 'forex', defaultPrice: 154.60, decimals: 2, prefix: '¥' },
-  { pair: 'AUDUSD', symbol: 'AUDUSD', name: 'AUD / USD', category: 'forex', defaultPrice: 0.6580, decimals: 4, prefix: '' },
-  { pair: 'USDCAD', symbol: 'USDCAD', name: 'USD / CAD', category: 'forex', defaultPrice: 1.3820, decimals: 4, prefix: '' },
-  { pair: 'USDCHF', symbol: 'USDCHF', name: 'USD / CHF', category: 'forex', defaultPrice: 0.8840, decimals: 4, prefix: '' },
+  { pair: 'EURUSD', symbol: 'EURUSD', name: 'EUR / USD', category: 'forex', defaultPrice: 1.15571, decimals: 5, prefix: '' },
+  { pair: 'GBPUSD', symbol: 'GBPUSD', name: 'GBP / USD', category: 'forex', defaultPrice: 1.29152, decimals: 5, prefix: '' },
+  { pair: 'USDJPY', symbol: 'USDJPY', name: 'USD / JPY', category: 'forex', defaultPrice: 154.603, decimals: 3, prefix: '¥' },
+  { pair: 'AUDUSD', symbol: 'AUDUSD', name: 'AUD / USD', category: 'forex', defaultPrice: 0.65804, decimals: 5, prefix: '' },
+  { pair: 'USDCAD', symbol: 'USDCAD', name: 'USD / CAD', category: 'forex', defaultPrice: 1.38202, decimals: 5, prefix: '' },
+  { pair: 'USDCHF', symbol: 'USDCHF', name: 'USD / CHF', category: 'forex', defaultPrice: 0.88401, decimals: 5, prefix: '' },
   // CFD
   { pair: 'XAUUSD', symbol: 'XAUUSD', name: 'Gold (Emas)', category: 'cfd', defaultPrice: 2514.80, decimals: 2, prefix: '$' },
   { pair: 'XAGUSD', symbol: 'XAGUSD', name: 'Silver (Perak)', category: 'cfd', defaultPrice: 29.45, decimals: 2, prefix: '$' },
@@ -126,6 +126,11 @@ export const AnalyticsTickerHeader: React.FC = () => {
                 </span>
                 <span>•</span>
                 <span className="text-slate-300 font-semibold">Perpetual Futures</span>
+                <span>•</span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#26252E] text-slate-300 border border-white/10 font-mono tracking-wider flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00E163] animate-pulse" />
+                  OANDA Feed
+                </span>
               </div>
             </div>
           </div>

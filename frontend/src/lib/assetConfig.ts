@@ -8,6 +8,7 @@ export interface AssetConfig {
   unit: string;
   tickSize: number;
   category: 'forex' | 'cfd' | 'crypto';
+  source?: 'OANDA' | 'Binance' | 'TradingView';
 }
 
 export const ASSET_REGISTRY: Record<string, AssetConfig> = {
@@ -15,67 +16,73 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     name: 'EUR / USD',
     symbol: 'EURUSD',
     pair: 'EURUSD',
-    defaultPrice: 1.0842,
-    decimals: 4,
+    defaultPrice: 1.15571,
+    decimals: 5,
     prefix: '',
     unit: 'EUR',
-    tickSize: 0.0001,
+    tickSize: 0.00001,
     category: 'forex',
+    source: 'OANDA',
   },
   GBPUSD: {
     name: 'GBP / USD',
     symbol: 'GBPUSD',
     pair: 'GBPUSD',
-    defaultPrice: 1.2915,
-    decimals: 4,
+    defaultPrice: 1.29152,
+    decimals: 5,
     prefix: '',
     unit: 'GBP',
-    tickSize: 0.0001,
+    tickSize: 0.00001,
     category: 'forex',
+    source: 'OANDA',
   },
   USDJPY: {
     name: 'USD / JPY',
     symbol: 'USDJPY',
     pair: 'USDJPY',
-    defaultPrice: 154.60,
-    decimals: 2,
+    defaultPrice: 154.603,
+    decimals: 3,
     prefix: '¥',
     unit: 'USD',
-    tickSize: 0.01,
+    tickSize: 0.001,
     category: 'forex',
+    source: 'OANDA',
   },
   AUDUSD: {
     name: 'AUD / USD',
     symbol: 'AUDUSD',
     pair: 'AUDUSD',
-    defaultPrice: 0.6580,
-    decimals: 4,
+    defaultPrice: 0.65804,
+    decimals: 5,
     prefix: '',
     unit: 'AUD',
-    tickSize: 0.0001,
+    tickSize: 0.00001,
     category: 'forex',
+    source: 'OANDA',
   },
   USDCAD: {
     name: 'USD / CAD',
     symbol: 'USDCAD',
     pair: 'USDCAD',
-    defaultPrice: 1.3820,
-    decimals: 4,
+    defaultPrice: 1.38202,
+    decimals: 5,
     prefix: '',
     unit: 'USD',
-    tickSize: 0.0001,
+    tickSize: 0.00001,
     category: 'forex',
+    source: 'OANDA',
   },
   USDCHF: {
     name: 'USD / CHF',
     symbol: 'USDCHF',
     pair: 'USDCHF',
-    defaultPrice: 0.8840,
-    decimals: 4,
+    defaultPrice: 0.88401,
+    decimals: 5,
     prefix: '',
     unit: 'USD',
-    tickSize: 0.0001,
+    tickSize: 0.00001,
     category: 'forex',
+    source: 'OANDA',
   },
   XAUUSD: {
     name: 'Gold (Emas)',
@@ -85,8 +92,9 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     decimals: 2,
     prefix: '$',
     unit: 'XAU',
-    tickSize: 0.1,
+    tickSize: 0.01,
     category: 'cfd',
+    source: 'OANDA',
   },
   XAGUSD: {
     name: 'Silver (Perak)',
@@ -98,6 +106,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'XAG',
     tickSize: 0.01,
     category: 'cfd',
+    source: 'OANDA',
   },
   USOIL: {
     name: 'Crude Oil WTI',
@@ -109,6 +118,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'BBL',
     tickSize: 0.01,
     category: 'cfd',
+    source: 'OANDA',
   },
   SPX500: {
     name: 'S&P 500 Index',
@@ -120,6 +130,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'PTS',
     tickSize: 0.25,
     category: 'cfd',
+    source: 'OANDA',
   },
   NAS100: {
     name: 'Nasdaq 100',
@@ -131,6 +142,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'PTS',
     tickSize: 0.5,
     category: 'cfd',
+    source: 'OANDA',
   },
   US30: {
     name: 'Dow Jones 30',
@@ -142,6 +154,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'PTS',
     tickSize: 1.0,
     category: 'cfd',
+    source: 'OANDA',
   },
   BTCUSDT: {
     name: 'Bitcoin',
@@ -153,6 +166,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'BTC',
     tickSize: 1.0,
     category: 'crypto',
+    source: 'OANDA',
   },
   ETHUSDT: {
     name: 'Ethereum',
@@ -164,6 +178,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'ETH',
     tickSize: 0.1,
     category: 'crypto',
+    source: 'OANDA',
   },
   LTCUSDT: {
     name: 'Litecoin',
@@ -175,6 +190,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'LTC',
     tickSize: 0.01,
     category: 'crypto',
+    source: 'OANDA',
   },
   SOLUSDT: {
     name: 'Solana',
@@ -186,6 +202,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'SOL',
     tickSize: 0.01,
     category: 'crypto',
+    source: 'OANDA',
   },
   BNBUSDT: {
     name: 'Binance',
@@ -197,6 +214,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'BNB',
     tickSize: 0.05,
     category: 'crypto',
+    source: 'OANDA',
   },
   ADAUSDT: {
     name: 'Cardano',
@@ -208,6 +226,7 @@ export const ASSET_REGISTRY: Record<string, AssetConfig> = {
     unit: 'ADA',
     tickSize: 0.0001,
     category: 'crypto',
+    source: 'OANDA',
   },
 };
 
